@@ -4,12 +4,18 @@
 package io.github.pollei.ticTac;
 
 import java.util.ArrayList;
+//import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import io.github.pollei.ticTac.RobotFactory.Robo;
 
 //import io.github.pollei.ticTac.RobotFactory;
 
-import java.util.HashSet;
+
 
 //https://en.wikipedia.org/wiki/Tic-tac-toe
 //https://en.wikipedia.org/w/index.php?title=Tic-tac-toe&oldid=1091798117
@@ -60,8 +66,8 @@ public class BaseTicTacGame {
 	 * (sym.isEmpty()) throw new java.lang.IllegalArgumentException(); } }
 	 */
 	static public class Player {
-		public PlyrType type;
-		public PlyrSym sym;
+		PlyrType type;
+		PlyrSym sym;
 		Player(PlyrType type, PlyrSym sym) {
 			this.type =type;
 			this.sym=sym;
@@ -74,14 +80,14 @@ public class BaseTicTacGame {
 		}
 	}
 	public static class RobotPlayer extends Player {
-		public RobotFactory.IRobot robo;
+	  RobotFactory.IRobot robo;
 
-		public RobotPlayer(PlyrType type, PlyrSym sym, RobotFactory.IRobot robo) {
+	  RobotPlayer(PlyrType type, PlyrSym sym, RobotFactory.IRobot robo) {
 			super(type, sym);
 			this.robo = robo;
 		}
 
-		public RobotPlayer(PlyrSym sym, RobotFactory.IRobot robo) {
+	  RobotPlayer(PlyrSym sym, RobotFactory.IRobot robo) {
 			this(PlyrType.Computer, sym, robo);
 		}
 
@@ -111,6 +117,35 @@ public class BaseTicTacGame {
 		}
 	}
 	
+	class Stroke {
+	  Set<SqrLoc> sqrs;
+	  Stroke(SqrLoc[] locA) {
+	    this.sqrs = new HashSet<>();
+	    for (var l : locA) { sqrs.add(l); }
+	  }
+	  Stroke(int[][] locA) {
+      this.sqrs = new HashSet<>();
+      for (var l : locA) {
+        var sl = new SqrLoc(l[0], l[1]);
+        sqrs.add(sl);
+        }
+    }
+	  public boolean isAllSym(PlyrSym sym) {
+	    for (var s : sqrs) {
+	      if (sym != board.boxes[s.x][s.y]) return false;
+	    }
+	    return true;
+	  }
+	  public boolean isWin() {
+	    return this.isAllSym(PlyrSym.X) || this.isAllSym(PlyrSym.O);
+	  }
+	  public PlyrSym getWinSym() {
+	    if (this.isAllSym(PlyrSym.X)) return PlyrSym.X;
+	    if (this.isAllSym(PlyrSym.O)) return PlyrSym.O;
+	    return PlyrSym.Empty;
+	  }
+	}
+	
 	static public class TicBoard {
 		PlyrSym[][] boxes = {
 				 {PlyrSym.Empty, PlyrSym.Empty, PlyrSym.Empty},
@@ -120,18 +155,41 @@ public class BaseTicTacGame {
 	}
 	//private plyrSym humanSym = plyrSym.X;
 	//private plyrType firstPlayer = plyrType.Human;
-	TicBoard board;
+	TicBoard board = new TicBoard();
 	List<Player> plyrLst = new ArrayList<Player>() ;
 	int turn = 0;
 	Player currPlayer;
 	Player winPlayer;
+	List<Stroke> strokes = Stream.of( new int[][][] {
+    {{0,0},{0,1},{0,2}},
+    {{1,0},{1,1},{1,2}},
+    {{2,0},{2,1},{2,2}},
+    {{0,0},{1,0},{2,0}},
+    {{0,1},{1,1},{2,1}},
+    {{0,2},{1,2},{2,2}},
+    {{0,0},{1,1},{2,2}},
+    {{0,2},{1,1},{2,0}}  }
+).map( (itm) -> new Stroke(itm)).collect(Collectors.toList());
 	// MoveDecider mvMaker;
 	
+	public Player getPlayerBySym(PlyrSym sym) {
+	  for (var p : plyrLst) {
+	    if (sym == p.sym) return p;
+	  }
+	  return null;
+	}
 	public Player getWinner() {
+	   var winStrokes = strokes.stream()
+	       .filter(Stroke::isWin)
+	       .collect(Collectors.toList());
+	   if (! winStrokes.isEmpty()) {
+	     var sym = winStrokes.get(0).getWinSym();
+	     winPlayer = getPlayerBySym(sym);
+	   }
 		return winPlayer;
 	}
 	public boolean isDone() {
-		return (null != winPlayer);
+		return (null != winPlayer || turn > 8);
 	}
 	public void setDefaultPlayers() {
 		if (0 != turn) return;
@@ -141,13 +199,29 @@ public class BaseTicTacGame {
 		currPlayer = plyrLst.get(0);
 		
 	}
-	public void setHumanPlayerHVC(int place, PlyrSym sym) {
+	public void setSolataire(int place, PlyrSym primarySym) {
+	  if (place<0 || place > 1) return;
+    if (0 != turn) return;
+    var hmn0 = new Player(PlyrType.Human, primarySym);
+    var hmn1 = new Player(PlyrType.Human, primarySym.toOpponent());
+    plyrLst.clear();
+    if (1 == place) {
+      plyrLst.add(hmn1);
+      plyrLst.add(hmn0);
+    } else if (0 == place) {
+      plyrLst.add(hmn0);
+      plyrLst.add(hmn1);
+    }
+    currPlayer = plyrLst.get(0);
+    
+	}
+	public void setHumanPlayerHVC(int place, PlyrSym hmnSym, Robo nemesis) {
 		if (place<0 || place > 1) return;
 		if (0 != turn) return;
-		var hmn = new Player(PlyrType.Human, sym);
+		var hmn = new Player(PlyrType.Human, hmnSym);
 		//var cmpt = new Player(PlyrType.Computer, sym.toOpponent());
-		var robo = RobotFactory.Robo.Randy.newRobot(sym.toOpponent());
-		var cmpt = new RobotPlayer(sym.toOpponent(), robo);
+		var robo = nemesis.newRobot(hmnSym.toOpponent());
+		var cmpt = new RobotPlayer(hmnSym.toOpponent(), robo);
 		plyrLst.clear();
 		if (1 == place) {
 			plyrLst.add(cmpt);
@@ -159,10 +233,17 @@ public class BaseTicTacGame {
 		currPlayer = plyrLst.get(0);
 	}
 	public boolean searchWin() {
-		return turn > 8;
+	  getWinner();
+		return isDone();
 	}
-	public void doComputerTurn() {
-		
+	public Move doComputerTurn() {
+	  if (isDone()) return null;
+	  if (currPlayer instanceof RobotPlayer rp) {
+	    var mv = rp.robo.nextMove(this);
+	    this.doMove(mv);
+	    return mv;
+	  }
+		return null;
 	}
 	public void doMove(Move mv) {
 		if (mv.x < 0 || mv.x > 2 ||
@@ -173,6 +254,7 @@ public class BaseTicTacGame {
 			board.boxes[mv.x][mv.y] = mv.sym;
 			turn++;
 			searchWin();
+			currPlayer = plyrLst.get(turn % 2);
 		}
 		
 	}

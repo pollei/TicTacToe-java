@@ -3,13 +3,17 @@
  */
 package io.github.pollei.ticTac;
 
+import io.github.pollei.ticTac.BaseTicTacGame.Move;
+
 //import ticTac.baseGame.ttBoard;
 // https://www.baeldung.com/java-find-all-classes-in-package
 
 
 
 import io.github.pollei.ticTac.BaseTicTacGame.PlyrSym;
+import io.github.pollei.ticTac.RobotFactory.Robo;
 
+import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -26,6 +30,7 @@ import java.awt.Insets;
 //import java.awt.ComponentOrientation;
 import java.awt.GridBagConstraints;
 import java.awt.BasicStroke;
+import java.awt.Cursor;
 //import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -33,6 +38,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 //import java.awt.event.ComponentAdapter;
 //import java.awt.event.ComponentEvent;
 //import java.awt.font.TextLayout;
@@ -52,19 +59,60 @@ public class SwingGame implements Runnable {
 	private TicBoardPanel ticTacBoard;
 	private BaseTicTacGame game;
 	
-	private static class TicSquareButton extends JButton {
+	private class TicSquareButton extends JButton {
 		/**
 		 * 
 		 */
 		private static final long serialVersionUID = -7693177093986152812L;
 		private BaseTicTacGame.PlyrSym sym;
+		private MouseListener mouse = new MouseListener() {
+		  private Cursor savedCursor = null;
+		  private Cursor busyCursor = new Cursor(Cursor.WAIT_CURSOR);
+
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      @Override
+      public void mousePressed(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      @Override
+      public void mouseReleased(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      @Override
+      public void mouseEntered(MouseEvent e) {
+        // TODO Auto-generated method stub
+        savedCursor = TicSquareButton.this.getCursor();
+        if (game.isDone() || sym != PlyrSym.Empty) {
+          TicSquareButton.this.setCursor(busyCursor);
+        }
+        
+      }
+
+      @Override
+      public void mouseExited(MouseEvent e) {
+        // TODO Auto-generated method stub
+        TicSquareButton.this.setCursor(savedCursor);
+        
+      }
+		  
+		};
 
 		/**
 		 * 
 		 */
-		public TicSquareButton() {
+		TicSquareButton() {
 			super();
 			sym = PlyrSym.Empty;
+			this.addMouseListener(mouse);
 		}
 
 		private void paintX(Graphics g) {
@@ -109,9 +157,59 @@ public class SwingGame implements Runnable {
 			  case O -> paintO(g);
 			  case Empty -> {}
 			}
-		}	
+		}
+
+    @Override
+    public Dimension getMaximumSize() {
+      //   Auto-generated method stub
+      var ret = super.getMaximumSize();
+      var sz = Math.min(ticTacBoard.getWidth(),ticTacBoard.getHeight())/3;
+      if (sz < 20) sz=20;
+      if (ret.width > sz) ret.width=sz;
+      if (ret.height > sz) ret.height=sz;
+      System.out.println(ret);
+      return ret;
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      // TODO Auto-generated method stub
+      var ret = super.getPreferredSize();
+      var boardSz = Math.min(ticTacBoard.getWidth(),ticTacBoard.getHeight());
+      var sz = (boardSz -26)/3;
+      if (sz < 20) sz=20;
+       ret.width=sz;
+        ret.height=sz;
+        //System.out.println(ret);
+      return ret;
+    }
+
+    @Override
+    public Dimension getMinimumSize() {
+      // TODO Auto-generated method stub
+      var ret = super.getMinimumSize();
+      var boardSz = Math.min(ticTacBoard.getWidth(),ticTacBoard.getHeight()) -34;
+      if (boardSz > 144) {
+        boardSz = ((boardSz-144)*9)/10 + 144;
+      }
+      
+      var sz = (boardSz)/3;
+      if (sz < 20) sz=20;
+       ret.width=sz;
+        ret.height=sz;
+        //System.out.println(ret);
+      return ret;
+    }
 	}
 
+	private static AbstractButton getSelectedButt(ButtonGroup bg) {
+	  var elems = bg.getElements();
+	  while (elems.hasMoreElements()) {
+	    var el = elems.nextElement();
+	    if (el.isSelected()) return el;
+	  }
+	  return null;
+	}
 	
 	private class SetupTT extends JPanel implements ActionListener {
 		/**
@@ -122,6 +220,10 @@ public class SwingGame implements Runnable {
 		private JRadioButton oCbox = new JRadioButton("O");
 		private JRadioButton frstOrdr = new JRadioButton("Go First");
 		private JRadioButton lstOrdr = new JRadioButton("Go Last");
+		private JRadioButton solNemesis = new JRadioButton("solitaire");
+    private ButtonGroup xoGrp = new ButtonGroup();
+    private ButtonGroup ordrGrp = new ButtonGroup();
+    private ButtonGroup nemesissGrp = new ButtonGroup();
 		
 		@Override
 		public Dimension getPreferredSize() { 
@@ -131,7 +233,7 @@ public class SwingGame implements Runnable {
 			return ret;
 		}
 
-		SetupTT() {
+		private SetupTT() {
 			var lo = new GridBagLayout();
 			this.setLayout(lo);
 			var labelCstraint = new GridBagConstraints();
@@ -154,8 +256,6 @@ public class SwingGame implements Runnable {
 			var ordrLab = new JLabel("Go First or Last: ");
 			labelCstraint.gridy = 1;
 			this.add(ordrLab, labelCstraint);
-			var xoGrp = new ButtonGroup();
-			var ordrGrp = new ButtonGroup();
 			xoGrp.add(xCbox);
 			xoGrp.add(oCbox);
 			xCbox.setSelected(true);
@@ -176,15 +276,26 @@ public class SwingGame implements Runnable {
 			cboxCstraint.gridx = 3;
 			this.add(lstOrdr, cboxCstraint);
 			
-			//xCbox.addActionListener(this);
-			//oCbox.addActionListener(this);
-			//frstOrdr.addActionListener(this);
-			//lstOrdr.addActionListener(this);
+			var nemesisLab = new JLabel("Opponent: ");
+			labelCstraint.gridy = 2;
+      this.add(nemesisLab, labelCstraint);
+      nemesissGrp.add(solNemesis);
+      cboxCstraint.gridx = 2;
+      cboxCstraint.gridy = 2;
+      this.add(solNemesis, cboxCstraint);
+      
+      for (var r : Robo.values()) {
+        var nemesisButt = new JRadioButton(r.name());
+        cboxCstraint.gridx++;
+        nemesissGrp.add(nemesisButt);
+        this.add(nemesisButt, cboxCstraint);
+      }
+			
 			
 			var sgBut = new JButton("start game");
-			cboxCstraint.gridy =2;
+			cboxCstraint.gridy =4;
 			cboxCstraint.gridx =0;
-			cboxCstraint.gridwidth =4;
+			cboxCstraint.gridwidth =6;
 			cboxCstraint.weightx=0.4;
 			cboxCstraint.fill = GridBagConstraints.BOTH;
 			sgBut.setActionCommand("G");
@@ -199,7 +310,22 @@ public class SwingGame implements Runnable {
 				// game.setDefaultPlayers();
 				BaseTicTacGame.PlyrSym sym = xCbox.isSelected() ? PlyrSym.X : PlyrSym.O;
 				int place = frstOrdr.isSelected() ? 0 : 1;
-				game.setHumanPlayerHVC(place,sym);
+				var nemesisButt = getSelectedButt(nemesissGrp);
+				Robo nemesis = null;
+				String nemTxt="";
+				try {
+          if (nemesisButt != null) {
+            nemTxt = nemesisButt.getText();
+            nemesis = Robo.valueOf(nemTxt);
+            //System.out.println(nemTxt);
+            //System.out.println(nemTxt + " " + nemesis);
+          }
+        } catch (RuntimeException e1) {
+          nemesis = null; 
+        }
+				if (nemesis != null)
+				  game.setHumanPlayerHVC(place,sym, nemesis);
+				else game.setSolataire(place, sym);
 				ticTacBoard = new TicBoardPanel();
 				topFrame.setContentPane(ticTacBoard);
 				topFrame.pack();
@@ -272,16 +398,16 @@ public class SwingGame implements Runnable {
 		 * 
 		 */
 		
-		public TicBoardPanel() {
+		private TicBoardPanel() {
 			this.setLayout(layOut);
 			var sqrCstraint = new GridBagConstraints();
 			var lineCstraint = new GridBagConstraints();
 			sqrCstraint.anchor = GridBagConstraints.CENTER;
-			sqrCstraint.fill = GridBagConstraints.BOTH;
+			sqrCstraint.fill = GridBagConstraints.NONE ;
 			sqrCstraint.ipadx =5;
 			sqrCstraint.ipadx =5;
-			sqrCstraint.weightx = 0.8;
-			sqrCstraint.weighty = 0.8;
+			//sqrCstraint.weightx = 0.8;
+			//sqrCstraint.weighty = 0.8;
 			lineCstraint.anchor = GridBagConstraints.CENTER;
 			lineCstraint.fill = GridBagConstraints.BOTH;
 			lineCstraint.ipadx =4;
@@ -333,7 +459,18 @@ public class SwingGame implements Runnable {
 				int x = (constra.gridx -1)/2;
 				int y = (constra.gridy -1)/2;
 				System.out.println( "X:" + x + " y:" + y);
-				compBoxes[x][y].sym = PlyrSym.X;
+				if (game.isDone()) {
+				  System.out.println("done");
+				  return;
+				}
+				var currSym = game.currPlayer.sym;
+				compBoxes[x][y].sym = currSym;
+				game.doMove(new Move(currSym,x,y));
+				var cmv = game.doComputerTurn();
+				if (cmv != null) {
+				  System.out.println(cmv);
+				  compBoxes[cmv.x()][cmv.y()].sym = cmv.sym();
+				}
 				this.revalidate();
 				this.repaint();
 			}
