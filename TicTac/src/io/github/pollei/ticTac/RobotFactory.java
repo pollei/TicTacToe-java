@@ -21,7 +21,7 @@ import io.github.pollei.ticTac.BaseTicTacGame.SqrLoc;
  * @author Steve_Pollei
  *
  */
-public class RobotFactory {
+public final class RobotFactory {
 	/**
 		 * @author Steve_Pollei
 		 *
@@ -52,7 +52,7 @@ public class RobotFactory {
 
 	//private List<Class<? extends IRobot> > roboList;
 	//private Map<String, Class<? extends IRobot> > roboMap;
-	protected static final Robo robots[] = {Robo.Randy, Robo.Bob, Robo.Emily};
+	//protected static final Robo robots[] = {Robo.Randy, Robo.Bob, Robo.Emily};
 	/**
 		 * @author Steve_Pollei
 		 *
@@ -70,7 +70,7 @@ public class RobotFactory {
 	}
 	
 	@FunctionalInterface
-  static protected interface IRobotFact {
+  static private interface IRobotFact {
 	  public abstract IRobot newRobot(PlyrSym sym);
 	
 	}
@@ -82,7 +82,8 @@ public class RobotFactory {
 	}
 	
 	static private final class RandoRobot extends BaseRobot implements IRobot {
-		public final static String roboName ="Randy";
+		final static String roboName ="Randy";
+		final static IRobotFact roboFactory= (s) -> new RandoRobot(s);
 
 		@Override
 		public Move nextMove(BaseTicTacGame currGame) {
@@ -162,7 +163,8 @@ public class RobotFactory {
 	
 	static private final class BlocksRobot extends WRandRobot implements IRobot {
 
-		public final static String roboName ="Bob";
+		final static String roboName ="Bob";
+		final static IRobotFact roboFactory= (s) -> new BlocksRobot(s);
 
 		//public BlocksRobot( ) { super( ); }
 		public BlocksRobot(PlyrSym sym) { super(sym); }
@@ -184,7 +186,8 @@ public class RobotFactory {
 	}
 	
 	static private final class ExpertRobot extends WRandRobot implements IRobot { 
-		public final static String roboName ="Emily";
+		final static String roboName ="Emily";
+		final static IRobotFact roboFactory= (s) -> new ExpertRobot(s);
 
 		//public ExpertRobot( ) { super( ); }
 		public ExpertRobot(PlyrSym sym) { super(sym); }
@@ -211,26 +214,19 @@ public class RobotFactory {
 	 * Experienced Emily
 	 */
 	static public enum Robo {
-		Randy(RandoRobot.roboName, (s) -> new RandoRobot(s)),
-		Bob(BlocksRobot.roboName, (s) -> new BlocksRobot(s)),
-		Emily(ExpertRobot.roboName, (s) -> new ExpertRobot(s));
-		private String name;
-		private IRobotFact factory;
-		private Robo(String name, IRobotFact factory ) {
-			this.name =name;
-			this.factory = factory;
-		}
-		public String getName() {return this.name;}
+		Randy(RandoRobot.roboFactory),
+		Bob(BlocksRobot.roboFactory),
+		Emily(ExpertRobot.roboFactory);
+		private final IRobotFact factory;
+		private Robo( IRobotFact factory ) {
+			this.factory = factory; }
 		public IRobot newRobot(PlyrSym sym) {
 		  return this.factory.newRobot(sym); }
 	}
 	
 	public static Robo getRoboByName(String name) {
-	  //Robo.valueOf(name);
-		for (var r : Robo.values()) {
-			if (r.name.equals(name)) return r;
-		}
-		return null;
+	  try { return Robo.valueOf(name); } catch (RuntimeException e) { }
+	  return null;
 	}
 
 	public static IRobot newRoboByName(String name, PlyrSym sym) {
@@ -242,12 +238,4 @@ public class RobotFactory {
 			default -> null;
 		};
 	}
-	public static List<String> getRoboNames() {
-		var ret = new ArrayList<String>();
-		for (var r : robots) { ret.add(r.name); }
-		return ret;
-	}
-
-	 
-
 }
