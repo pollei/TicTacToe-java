@@ -15,6 +15,7 @@ import io.github.pollei.ticTac.RobotFactory.Robo;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -27,6 +28,8 @@ import javax.swing.SwingUtilities;
 
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Toolkit;
 //import java.awt.ComponentOrientation;
 import java.awt.GridBagConstraints;
 import java.awt.BasicStroke;
@@ -38,8 +41,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 //import java.awt.event.ComponentAdapter;
 //import java.awt.event.ComponentEvent;
 //import java.awt.font.TextLayout;
@@ -58,6 +59,7 @@ public class SwingGame implements Runnable {
 	private SetupTT setupPanel;
 	private TicBoardPanel ticTacBoard;
 	private BaseTicTacGame game;
+	private Cursor goAwayCursor;
 	
 	private class TicSquareButton extends JButton {
 		/**
@@ -65,54 +67,13 @@ public class SwingGame implements Runnable {
 		 */
 		private static final long serialVersionUID = -7693177093986152812L;
 		private BaseTicTacGame.PlyrSym sym;
-		private MouseListener mouse = new MouseListener() {
-		  private Cursor savedCursor = null;
-		  private Cursor busyCursor = new Cursor(Cursor.WAIT_CURSOR);
-
-      @Override
-      public void mouseClicked(MouseEvent e) {
-        // TODO Auto-generated method stub
-        
-      }
-
-      @Override
-      public void mousePressed(MouseEvent e) {
-        // TODO Auto-generated method stub
-        
-      }
-
-      @Override
-      public void mouseReleased(MouseEvent e) {
-        // TODO Auto-generated method stub
-        
-      }
-
-      @Override
-      public void mouseEntered(MouseEvent e) {
-        // TODO Auto-generated method stub
-        savedCursor = TicSquareButton.this.getCursor();
-        if (game.isDone() || sym != PlyrSym.Empty) {
-          TicSquareButton.this.setCursor(busyCursor);
-        }
-        
-      }
-
-      @Override
-      public void mouseExited(MouseEvent e) {
-        // TODO Auto-generated method stub
-        TicSquareButton.this.setCursor(savedCursor);
-        
-      }
-		  
-		};
-
+		
 		/**
 		 * 
 		 */
 		TicSquareButton() {
 			super();
 			sym = PlyrSym.Empty;
-			this.addMouseListener(mouse);
 		}
 
 		private void paintX(Graphics g) {
@@ -155,7 +116,7 @@ public class SwingGame implements Runnable {
 			switch (sym) {
 			  case X -> paintX(g);
 			  case O -> paintO(g);
-			  case Empty -> {}
+			  case Empty -> { }
 			}
 		}
 
@@ -173,7 +134,6 @@ public class SwingGame implements Runnable {
 
     @Override
     public Dimension getPreferredSize() {
-      // TODO Auto-generated method stub
       var ret = super.getPreferredSize();
       var boardSz = Math.min(ticTacBoard.getWidth(),ticTacBoard.getHeight());
       var sz = (boardSz -26)/3;
@@ -186,7 +146,6 @@ public class SwingGame implements Runnable {
 
     @Override
     public Dimension getMinimumSize() {
-      // TODO Auto-generated method stub
       var ret = super.getMinimumSize();
       var boardSz = Math.min(ticTacBoard.getWidth(),ticTacBoard.getHeight()) -34;
       if (boardSz > 144) {
@@ -307,27 +266,23 @@ public class SwingGame implements Runnable {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 				game = new BaseTicTacGame();
-				// game.setDefaultPlayers();
+				
 				BaseTicTacGame.PlyrSym sym = xCbox.isSelected() ? PlyrSym.X : PlyrSym.O;
 				int place = frstOrdr.isSelected() ? 0 : 1;
 				var nemesisButt = getSelectedButt(nemesissGrp);
 				Robo nemesis = null;
 				String nemTxt="";
-				try {
           if (nemesisButt != null) {
             nemTxt = nemesisButt.getText();
-            nemesis = Robo.valueOf(nemTxt);
-            //System.out.println(nemTxt);
-            //System.out.println(nemTxt + " " + nemesis);
+            nemesis = RobotFactory.getRoboByName(nemTxt);
           }
-        } catch (RuntimeException e1) {
-          nemesis = null; 
-        }
+        
 				if (nemesis != null)
 				  game.setHumanPlayerHVC(place,sym, nemesis);
 				else game.setSolataire(place, sym);
 				ticTacBoard = new TicBoardPanel();
 				topFrame.setContentPane(ticTacBoard);
+				ticTacBoard.doComputerTurn();
 				topFrame.pack();
 		    topFrame.setVisible(true);
 		}
@@ -450,6 +405,17 @@ public class SwingGame implements Runnable {
 			}
 			
 		}
+		
+		private void doComputerTurn() {
+		  var cmv = game.doComputerTurn();
+      if (cmv != null) {
+        System.out.println(cmv);
+        var cb = compBoxes[cmv.x()][cmv.y()];
+        cb.sym = cmv.sym();
+        cb.setCursor(goAwayCursor);
+        //cb.setEnabled(false);
+      }
+		}
 
 		@Override
 		public void actionPerformed(ActionEvent e) { 
@@ -463,14 +429,13 @@ public class SwingGame implements Runnable {
 				  System.out.println("done");
 				  return;
 				}
-				var currSym = game.currPlayer.sym;
-				compBoxes[x][y].sym = currSym;
+				var currSym = game.getCurrPlayer().sym;
+				var cb = compBoxes[x][y];
+				cb.sym = currSym;
+				cb.setCursor(goAwayCursor);
+				//cb.setEnabled(false);
 				game.doMove(new Move(currSym,x,y));
-				var cmv = game.doComputerTurn();
-				if (cmv != null) {
-				  System.out.println(cmv);
-				  compBoxes[cmv.x()][cmv.y()].sym = cmv.sym();
-				}
+				this.doComputerTurn();
 				this.revalidate();
 				this.repaint();
 			}
@@ -491,8 +456,13 @@ public class SwingGame implements Runnable {
 		//topFrame.getContentPane().add(setupPanel);
 		topFrame.setContentPane(setupPanel);
 		topFrame.pack();
-        topFrame.setVisible(true);
-		
+    topFrame.setVisible(true);
+		var tk =Toolkit.getDefaultToolkit();
+		var icoRes = SwingGame.class.getResource("icons8-cancel-67.png");
+		// https://icons8.com/icon/KMElf9zOI063/cancel
+		var icoImg = new ImageIcon(icoRes).getImage();
+		goAwayCursor = tk.createCustomCursor(icoImg, new Point(0,0), "go away cursor");
+		//System.out.println(goAwayCursor);
 	}
 	 
 	
@@ -500,7 +470,7 @@ public class SwingGame implements Runnable {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) { 
+	public static void main(String[] args) {
 		SwingUtilities.invokeLater(new SwingGame() );
 	}
 
