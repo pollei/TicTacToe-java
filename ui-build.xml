@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="build-jars" name="TicTac">
+<target name="init" ><mkdir  dir="bin"/><mkdir  dir="dist"/></target>
+<target name="clean"><delete dir="bin"/><delete dir="dist"/></target>
+<target depends="build-java" name="build"/>
+<target depends="init" name="build-java">
+  <javac debug="false" debuglevel="none" destdir="bin" includeantruntime="false" source="17" target="17">
+    <src path="TicTac/src"/> </javac>
+</target>
+<target depends="build-java" name="jar-swing">
+  <jar destfile="dist/TicTac-swing.jar">
+    <fileset dir="bin" includes="**/ticTac/BaseTicTacGame*.class **/ticTac/RobotFactory*.class **/ticTac/SwingGame*.class" />
+    <fileset dir="TicTac/res" includes="**/ticTac/*.png" />
+    <manifest><attribute name="Main-Class" value="io.github.pollei.ticTac.SwingGame"/></manifest>
+  </jar>
+</target>
+<target depends="build-java" name="jar-console">
+  <jar destfile="dist/TicTac-console.jar">
+    <fileset dir="bin" includes="**/ticTac/BaseTicTacGame*.class **/ticTac/RobotFactory*.class **/ticTac/ConsoleGame*.class" />
+    <manifest><attribute name="Main-Class" value="io.github.pollei.ticTac.ConsoleGame"/></manifest>
+  </jar>
+</target>
+<target depends="jar-swing,jar-console" name="build-jars" />
+</project>
