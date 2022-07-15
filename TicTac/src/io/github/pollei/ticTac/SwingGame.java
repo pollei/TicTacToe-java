@@ -60,6 +60,7 @@ public class SwingGame implements Runnable {
 	private TicBoardPanel ticTacBoard;
 	private BaseTicTacGame game;
 	private Cursor goAwayCursor;
+	private FinishTT finTT;
 	
 	private class TicSquareButton extends JButton {
 		/**
@@ -335,6 +336,7 @@ public class SwingGame implements Runnable {
 				{null,null,null},
 				{null,null,null}, };
 		private GridBagLayout layOut = new GridBagLayout();
+    
 		
 
 		@Override
@@ -438,6 +440,10 @@ public class SwingGame implements Runnable {
 				this.doComputerTurn();
 				this.revalidate();
 				this.repaint();
+				if (game.isDone()) {
+          System.out.println("done");
+          finTT = new FinishTT();
+        }
 			}
 			
 		}
@@ -445,6 +451,72 @@ public class SwingGame implements Runnable {
 		 * 
 		 */
 	}
+	
+	private class FinishTT extends JFrame implements ActionListener {
+    private static final long serialVersionUID = -4244736932838286773L;
+    private final JButton resetButt;
+    private final JButton quitButt;
+
+    private FinishTT() {
+	    super("TicTacToe Results");
+	    var layOut = new GridBagLayout();
+	    var topPanel = new JPanel();
+	    topPanel.setLayout(layOut);
+	    this.add(topPanel);
+	    var resultLab = new JLabel("the winner is .... !");
+	    // TODO put something real into results label 
+	    
+	    var labCstraint = new GridBagConstraints();
+	    var padding = new Insets(6,6,6,6);
+	    labCstraint.gridx=0;
+	    labCstraint.gridy=0;
+	    labCstraint.ipadx = labCstraint.ipady =6;
+	    labCstraint.gridwidth =5;
+	    labCstraint.insets = padding;
+	    topPanel.add(resultLab, labCstraint);
+	    var buttCstraint = new GridBagConstraints();
+	    buttCstraint.gridx=1;
+      buttCstraint.gridy=1;
+      buttCstraint.ipadx = buttCstraint.ipady =6;
+      buttCstraint.insets = padding;
+      resetButt = new JButton("Play Again");
+      topPanel.add(resetButt, buttCstraint);
+      resetButt.addActionListener(this);
+      quitButt = new JButton("Quit");
+      buttCstraint.gridx=3;
+      topPanel.add(quitButt, buttCstraint);
+      quitButt.addActionListener(this);
+      this.pack();
+      this.setVisible(true);
+	    
+	  }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      // TODO have the buttons actually work
+      System.out.println(e);
+      if (e.getSource() instanceof JButton jb) {
+        if (jb == resetButt) {
+          game = null;
+          setupPanel = new SetupTT();
+          //topFrame.getContentPane().add(setupPanel);
+          topFrame.setContentPane(setupPanel);
+          topFrame.pack();
+          topFrame.setVisible(true);
+          ticTacBoard = null;
+          return;
+        }
+        if (jb == quitButt) {
+          finTT.dispose();
+          topFrame.dispose();
+          // https://docs.oracle.com/javase/8/docs/api/java/awt/doc-files/AWTThreadIssues.html
+          System.exit(0);
+        }
+      }
+    }
+	  
+	}
+	
 	
 	@Override
 	public void run() { 
