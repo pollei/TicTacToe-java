@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+<style>
+#tttAll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    min-height: 45vmin;
+}
+#ttt-grid {
+    display: grid;
+    grid-template-columns: 5px 1fr 5px 1fr 5px 1fr 5px;
+    grid-template-rows: 5px 1fr 5px 1fr 5px 1fr 5px;
+    /* margin-inline: auto; */
+     max-width: min(820px, 93vmin);
+}
+.ttt-sqr {
+    max-width: max(18px, min(29vmin, 270px) );
+    width: max(15px, min(28vmin, 250px) );
+    aspect-ratio: 1 /1;
+    position: relative;
+    object-fit: fill; 
+    background-size: cover;
+}
+[data-ttt-winner-sym="x"] .ttt-sqr[data-ttt-mark="o"]::before,
+[data-ttt-winner-sym="o"] .ttt-sqr[data-ttt-mark="x"]::before {
+    content: '';
+    position: absolute;
+    background-color: white;
+    display: block;
+    inset: 0;
+    opacity: 0.7; 
+    z-index: 2;
+}
+
+.ttt-sqr[data-ttt-mark="o"] {
+  background-image: url(o.svg);
+}
+.ttt-sqr[data-ttt-mark="x"] {
+  background-image: url(x.svg);
+}
+#ttt-grid[data-ttt-curr-plyr="x"] .ttt-sqr:not([data-ttt-mark]):hover {
+  background-image: url(x.svg);
+}
+#ttt-grid[data-ttt-curr-plyr="o"] .ttt-sqr:not([data-ttt-mark]):hover {
+  background-image: url(o.svg);
+}
+.ttt-sqr button {
+    min-width: min(15px, 20vmin);
+    width: max(15px, min(28vmin, 250px) );
+    max-width: min(250px, 29vw );
+    aspect-ratio: 1 /1;
+    opacity: 0.9;
+    position: relative;
+    top: 0px; left: 0px;
+}
+.ttt-sqr img {
+    z-index: 2;
+    overflow: hidden;
+    position: absolute;
+    top: 0px; left: 0px;
+    width: max(15px, min(28vmin, 250px) );
+    
+}
+.ttt-sqr[data-ttt-mark], [data-ttt-winner-sym] .ttt-sqr { cursor: not-allowed;
+}
+.ttt-sqr[data-ttt-mark] button, [data-ttt-winner-sym] button {
+    display: none;
+}
+.ttt-sqr[data-ttt-win-mark] {
+    background-color: lightgreen;
+}
+[data-ttt-col="0"] { grid-column: 2; }
+[data-ttt-col="1"] { grid-column: 4; }
+[data-ttt-col="2"] { grid-column: 6; }
+[data-ttt-row="0"] { grid-row: 2; }
+[data-ttt-row="1"] { grid-row: 4; }
+[data-ttt-row="2"] { grid-row: 6; }
+[data-ttt-hl] { grid-column: 1 / 8; background-color: black; height: 5px;}
+[data-ttt-vl] { grid-row: 1 / 8; background-color: black; width: 5px;}
+[data-ttt-hl="0"] {grid-row: 3;}
+[data-ttt-hl="1"] {grid-row: 5;}
+[data-ttt-vl="0"] {grid-column: 3;}
+[data-ttt-vl="1"] {grid-column: 5;}
+
+div.sideFunc {
+    max-width: max(40em, 32vmin);
+    padding: 1em;
+}
+</style>
+<div id="tttAll">
+    <div class="sideFunc">
+        <form >
+            <fieldset>
+                <legend>X or O</legend>
+                <label for="xRadButt">X:&nbsp;</label>
+                <input type="radio" name="xoRadGrp" id="xRadButt">
+                <label for="oRadButt">O:&nbsp;</label>
+                <input type="radio" name="xoRadGrp" id="oRadButt">
+            </fieldset>
+            <fieldset>
+                <legend>Go First or Last</legend>
+                <label for="frstRaddButt">First:&nbsp;</label>
+                <input type="radio" name="ordrRadGrp" id="frstRaddButt">
+                <label for="lstRaddButt">Last:&nbsp;</label>
+                <input type="radio" name="ordrRadGrp" id="lstRaddButt">
+
+            </fieldset>
+            <fieldset>
+                <legend>Opponent</legend>
+                <label for="solNemRaddButt">Solitaire:&nbsp;</label>
+                <input type="radio" name="nemesisRadGrp" id="solNemRaddButt">
+                <label for="randyNemRaddButt">Randy:&nbsp;</label>
+                <input type="radio" name="nemesisRadGrp" id="randyNemRaddButt">
+                <label for="bobNemRaddButt">Bob:&nbsp;</label>
+                <input type="radio" name="nemesisRadGrp" id="bobNemRaddButt">
+                <label for="emilyNemRaddButt">Emily:&nbsp;</label>
+                <input type="radio" name="nemesisRadGrp" id="emilyNemRaddButt">
+            </fieldset>
+            <button id="startGameButt">Start Game</button>
+        </form>
+    </div>
+    <div id="ttt-grid" data-ttt-curr-plyr="x" >
+        <div class="ttt-sqr" data-ttt-col="0" data-ttt-row="0" >
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="1" data-ttt-row="0">
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="2" data-ttt-row="0">
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="0" data-ttt-row="1">
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="1" data-ttt-row="1">
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="2" data-ttt-row="1">
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="0" data-ttt-row="2">
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="1" data-ttt-row="2"  >
+            <button></button> 
+        </div>
+        <div class="ttt-sqr" data-ttt-col="2" data-ttt-row="2"  >
+            <button></button> 
+        </div>
+        <div data-ttt-hl="0"></div>
+        <div data-ttt-hl="1"></div>
+        <div data-ttt-vl="0"></div>
+        <div data-ttt-vl="1"></div> 
+    </div>
+<div class="sideFunc">
+    <p id="tttOutcome"></p>
+    <form id="rstForm">
+        <button type="reset" id="rstButt">reset game</button>
+    </form>
+</div>
+</div>
+<script>
+(( function() {
+  let tttGrid = document.getElementById('ttt-grid');
+  let winnerSym = null;
+  function qryStrokeArr(arr) {
+    return arr.map (
+        (x) => tttGrid.querySelectorAll('.ttt-sqr[data-ttt-col="' + x[1] + '"][data-ttt-row="' + x[0] + '"]')[0]
+    );
+  }
+  function isWinStroke(arr) {
+    for (var itm of arr) {
+        if (!('tttMark' in itm.dataset)) return false; }
+    const mark = arr[0].dataset['tttMark'];
+    for (var itm of arr) {
+        if (itm.dataset['tttMark'] !== mark) return false; }
+    winnerSym = mark;
+    tttGrid.dataset.tttWinnerSym=mark;
+    return true;
+  }
+  const strokes = ([
+    [[0,0],[0,1],[0,2]],
+    [[1,0],[1,1],[1,2]],
+    [[2,0],[2,1],[2,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,1],[1,1],[2,1]],
+    [[0,2],[1,2],[2,2]],
+    [[0,0],[1,1],[2,2]],
+    [[0,2],[1,1],[2,0]] ]).map(qryStrokeArr);
+  //console.log(strokes);
+
+  function nxt_plyr() {
+    if ('o' === tttGrid.dataset['tttCurrPlyr']) {
+        tttGrid.dataset['tttCurrPlyr']= 'x';
+    } else {
+        tttGrid.dataset['tttCurrPlyr']= 'o';
+    }
+  }
+  function move_cb(evnt) {
+    //console.log(evnt, evnt.target);
+    if ('tttWinnerSym' in tttGrid.dataset) return;
+    let sqr = evnt.target.closest('.ttt-sqr');
+    if ('tttMark' in sqr.dataset) return;
+    sqr.dataset.tttMark=tttGrid.dataset['tttCurrPlyr'];
+    let winArr = strokes.filter(isWinStroke);
+    if (winArr.length) {
+        console.log(winArr);
+        tttGrid.dataset['tttCurrPlyr']= 'over';
+        for (strk of winArr) {
+            for (sqr of strk) {
+                sqr.dataset.tttWinMark="win";
+            }
+        }
+        return;
+    }
+    nxt_plyr();
+
+  }
+
+  tttGrid.addEventListener('click', move_cb);
+  document.getElementById('rstButt').addEventListener('click',
+    (e) => {
+        tttGrid.querySelectorAll('.ttt-sqr[data-ttt-mark]').forEach(
+            (itm) => {delete itm.dataset.tttMark;} );
+        tttGrid.querySelectorAll('.ttt-sqr[data-ttt-win-mark]').forEach(
+            (itm) => {delete itm.dataset.tttWinMark;} );
+        delete tttGrid.dataset.tttWinnerSym;
+        tttGrid.dataset['tttCurrPlyr']= 'x';
+        } );
+  // console.log('bye');
+})());
+</script>

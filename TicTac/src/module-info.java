@@ -11,4 +11,5 @@
 
 module ticTac {
 	requires java.desktop;
+	exports io.github.pollei.ticTac;
 }
