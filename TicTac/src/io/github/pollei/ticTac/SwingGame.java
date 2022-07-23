@@ -493,7 +493,6 @@ public class SwingGame implements Runnable {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      // TODO have the buttons actually work
       System.out.println(e);
       if (e.getSource() instanceof JButton jb) {
         if (jb == resetButt) {

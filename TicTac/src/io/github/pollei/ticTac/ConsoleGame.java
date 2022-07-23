@@ -68,8 +68,6 @@ public final class ConsoleGame  {
       outputGameBoard();
       doHumanMove();
       game.doComputerTurn();
-      /* make moves */ 
-      //throw new Error("TODO nothing implemented yet TODO");
     }
     var winPlayer = game.getWinner();
     if (winPlayer != null) {
