@@ -16,6 +16,7 @@ import java.util.TreeMap;
 import io.github.pollei.ticTac.BaseTicTacGame.Move;
 import io.github.pollei.ticTac.BaseTicTacGame.PlyrSym;
 import io.github.pollei.ticTac.BaseTicTacGame.SqrLoc;
+import io.github.pollei.ticTac.BaseTicTacGame.SqrsForSym;
 
 /**
  * @author Steve_Pollei
@@ -44,7 +45,11 @@ public final class RobotFactory {
 		public WeightedRandom() {
 			//  Auto-generated constructor stub
 		}
-
+    public void add(Map<E, Long> newEs) {
+      for (var w : newEs.entrySet()) {
+        this.add(w.getValue(), w.getKey());
+      }
+    }
 	}
 	
 
@@ -101,6 +106,8 @@ public final class RobotFactory {
 		protected Map<BaseTicTacGame.SqrLoc, Long> basicWeights =
 				new HashMap<>();
 		private final Random random = new Random();
+    SqrsForSym mySqrs;
+    SqrsForSym nemSqrs;
 		protected void initBasicWeights() {
 			var locs = BaseTicTacGame.getAllLocs();
 			for (var l : locs) {
@@ -130,17 +137,23 @@ public final class RobotFactory {
 			//int n = mvs.size(); 
 			Map<BaseTicTacGame.SqrLoc, Long> newWeights =
 					new HashMap<>();
+			var currSym = currGame.getCurrPlayer().sym;
+			mySqrs = currGame.new SqrsForSym(currSym);
+			nemSqrs = currGame.new SqrsForSym(currSym.toOpponent());
 			for (var w: basicWeights.entrySet()) {
 				var k= w.getKey();
 				var v = w.getValue();
 				var sym=currGame.getSymAtLoc(k);
-				if (sym.isMarked()) {
-					newWeights.put(k, v + getAdjustWeight(currGame, k));
+				if (sym.isEmpty()) {
+				  long nv = v + this.getAdjustWeight(currGame, k);
+					newWeights.put(k, nv);
+					//System.out.print(k);System.out.println(nv);
 				}
 			}
 			var wrnd = new WeightedRandom<SqrLoc>();
-			//wrnd.add(newWeights);
+			wrnd.add(newWeights);
 			var newLoc = wrnd.sample();
+			mySqrs=null; nemSqrs=null;
 			return new Move(sym,newLoc.x(), newLoc.y());
 			//return null;
 		}
@@ -176,6 +189,13 @@ public final class RobotFactory {
 		public long getBaseWeightSide() { return 36; }
 		@Override
 		public long getAdjustWeight(BaseTicTacGame currGame, SqrLoc sl) {
+		  //System.out.println("adj");
+		  if (mySqrs.nearWins.contains(sl)) {
+        return 1492 + 421*nemSqrs.nearWins.size();
+      }
+		  if (nemSqrs.nearWins.contains(sl)) {
+		    return 675;
+		  }
 			// TODO Auto-generated method stub
 			// add something to block other from winning
 			return super.getAdjustWeight(currGame, sl);
