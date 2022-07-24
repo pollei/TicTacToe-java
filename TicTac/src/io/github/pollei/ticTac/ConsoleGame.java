@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import io.github.pollei.ticTac.BaseTicTacGame.Move;
 import io.github.pollei.ticTac.BaseTicTacGame.PlyrSym;
+import io.github.pollei.ticTac.RobotFactory.Robo;
 
 
 
@@ -40,6 +41,41 @@ public final class ConsoleGame  {
   }
   private void outputGameBoard( ) { outputGameBoard(System.out); }
   
+  private PlyrSym getHumanSym() {
+    Pattern symChoicePat = Pattern.compile("[xXoO12]");
+    while (true) {
+      System.out.print("pick X or O : ");
+      if (!inScan.hasNext(symChoicePat)) {
+        inScan.nextLine();
+        continue;
+      }
+      var symCh = inScan.next(symChoicePat);
+      return switch (symCh) {
+        case "X", "x", "1" ->  PlyrSym.X;
+        case "O", "o", "2" ->  PlyrSym.O;
+        default -> PlyrSym.O; };
+    }
+  }
+  private int getOrder() {
+    Pattern ordrChoicePat = Pattern.compile("[FL12]|first|last", Pattern.CASE_INSENSITIVE  );
+    while (true) {
+      System.out.print("Go First[1] or Last[2] : ");
+      if (!inScan.hasNext(ordrChoicePat)) {
+        inScan.nextLine();
+        continue;
+      }
+      var ordrStr = inScan.next(ordrChoicePat);
+      return switch (ordrStr.toLowerCase()) {
+        case "f", "1", "first" -> 0;
+        case "l", "2", "last" -> 1;
+        default -> 0; };
+    }
+  }
+  private RobotFactory.Robo getNemesis() {
+    // TODO let human select Bob or Emily as well
+    return Robo.Randy;
+  }
+  
   private void doHumanMove() {
     var currSym = game.getCurrPlayer().sym;
     while (true) {
@@ -63,7 +99,11 @@ public final class ConsoleGame  {
   private void playGame() {
     game = new BaseTicTacGame();
     inScan.useDelimiter(delim);
-    game.setHumanPlayerHVC(0, PlyrSym.X, RobotFactory.Robo.Randy );
+    var hSym = getHumanSym();
+    var hOrder = getOrder();
+    var nemesis = getNemesis();
+    game.setHumanPlayerHVC(hOrder, hSym, nemesis );
+    game.doComputerTurn();
     while (! game.isDone()) {
       outputGameBoard();
       doHumanMove();
