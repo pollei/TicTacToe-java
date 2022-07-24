@@ -36,6 +36,7 @@ import java.awt.BasicStroke;
 import java.awt.Cursor;
 //import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 //import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -461,19 +462,30 @@ public class SwingGame implements Runnable {
 	    super("TicTacToe Results");
 	    var layOut = new GridBagLayout();
 	    var topPanel = new JPanel();
+	    var winner = game.getWinner();
 	    topPanel.setLayout(layOut);
 	    this.add(topPanel);
-	    var resultLab = new JLabel("the winner is .... !");
-	    // TODO put something real into results label 
-	    
+	    var resulttTxt = (winner != null)
+	        ? "the winner is .... "
+	        : "Only losers here   ";
+	    var resultLab = new JLabel(resulttTxt);
+
 	    var labCstraint = new GridBagConstraints();
 	    var padding = new Insets(6,6,6,6);
 	    labCstraint.gridx=0;
 	    labCstraint.gridy=0;
 	    labCstraint.ipadx = labCstraint.ipady =6;
-	    labCstraint.gridwidth =5;
+	    labCstraint.gridwidth =2;
 	    labCstraint.insets = padding;
 	    topPanel.add(resultLab, labCstraint);
+	    if (winner != null) {
+	      var winnerLab = new JLabel(winner.sym.toString());
+	      var font = winnerLab.getFont();
+	      var lrgFont = font.deriveFont(font.getStyle(), 24);
+	      winnerLab.setFont( lrgFont);
+	      labCstraint.gridx=3;
+	      topPanel.add(winnerLab, labCstraint);
+	    }
 	    var buttCstraint = new GridBagConstraints();
 	    buttCstraint.gridx=1;
       buttCstraint.gridy=1;
@@ -512,6 +524,21 @@ public class SwingGame implements Runnable {
           System.exit(0);
         }
       }
+    }
+
+    @Override
+    public Dimension getMinimumSize() {
+      var ret = super.getMinimumSize();
+      if (ret.width < 250) ret.width =250;
+      return ret;
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      // TODO Auto-generated method stub
+      var ret= super.getPreferredSize();
+      if (ret.width < 320) ret.width =320;
+      return ret;
     }
 	  
 	}
