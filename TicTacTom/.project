@@ -3,6 +3,7 @@
 	<name>TicTacTom</name>
 	<comment></comment>
 	<projects>
+		<project>TicTac</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

@@ -10,7 +10,12 @@
 // https://en.wikipedia.org/w/index.php?title=Tic-tac-toe&oldid=1091798117
 
 module ticTacTom {
-	requires java.desktop;
+	//requires java.base;
   requires jakarta.servlet;
   requires ticTac;
+  requires java.sql;
+  requires java.xml;
+  requires org.apache.tomcat.util;
+  requires org.xerial.sqlitejdbc;
+  requires java.naming;
 }

@@ -11,6 +11,12 @@
     gap: 1em;
     min-height: 45vmin;
 }
+#tttAll[data-ttt-phase="config"] :is(#ttt-grid, #gameResetDiv) {
+    display: none;
+}
+#tttAll[data-ttt-phase="play"] #gameCnfgDiv {
+    display: none;
+}
 #ttt-grid {
     display: grid;
     grid-template-columns: 5px 1fr 5px 1fr 5px 1fr 5px;
@@ -92,39 +98,42 @@ div.sideFunc {
     padding: 1em;
 }
 </style>
-<div id="tttAll">
-    <div class="sideFunc">
-        <form >
+<div id="tttAll" data-ttt-phase="config">
+    <div id=gameCnfgDiv class="sideFunc">
+        <form id=gameCnfgForm >
             <fieldset>
                 <legend>X or O</legend>
                 <label for="xRadButt">X:&nbsp;</label>
-                <input type="radio" name="xoRadGrp" id="xRadButt">
+                <input type="radio" name="xoRadGrp" id="xRadButt" value="X" checked>
                 <label for="oRadButt">O:&nbsp;</label>
-                <input type="radio" name="xoRadGrp" id="oRadButt">
+                <input type="radio" name="xoRadGrp" id="oRadButt" value="O">
             </fieldset>
             <fieldset>
                 <legend>Go First or Last</legend>
                 <label for="frstRaddButt">First:&nbsp;</label>
-                <input type="radio" name="ordrRadGrp" id="frstRaddButt">
+                <input type="radio" name="ordrRadGrp" id="frstRaddButt" value="0" checked>
                 <label for="lstRaddButt">Last:&nbsp;</label>
-                <input type="radio" name="ordrRadGrp" id="lstRaddButt">
+                <input type="radio" name="ordrRadGrp" id="lstRaddButt" value="1">
 
             </fieldset>
             <fieldset>
                 <legend>Opponent</legend>
-                <label for="solNemRaddButt">Solitaire:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="solNemRaddButt">
-                <label for="randyNemRaddButt">Randy:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="randyNemRaddButt">
+                <span data-ttt-is-foe-kind="self"><label for="solNemRaddButt">Solitaire:&nbsp;</label>
+                <input type="radio" name="nemesisRadGrp" id="solNemRaddButt" value="self"></span>
+                <span data-ttt-is-foe-kind="robot"><label for="randyNemRaddButt">Randy:&nbsp;</label>
+                <input type="radio" name="nemesisRadGrp" id="randyNemRaddButt" value="Randy">
                 <label for="bobNemRaddButt">Bob:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="bobNemRaddButt">
+                <input type="radio" name="nemesisRadGrp" id="bobNemRaddButt" value="Bob" checked>
                 <label for="emilyNemRaddButt">Emily:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="emilyNemRaddButt">
+                <input type="radio" name="nemesisRadGrp" id="emilyNemRaddButt" value="Emily" disabled></span>
+                <span data-ttt-is-foe-kind="human"><!-- player vs. player --></span>
             </fieldset>
-            <button id="startGameButt">Start Game</button>
+            <input type="text" hidden name="foe-kind" value="robot">
+            <button id="startGameButt" type="button">Start Game</button>
         </form>
     </div>
-    <div id="ttt-grid" data-ttt-curr-plyr="x" >
+    <div id="ttt-grid" data-ttt-curr-plyr="x" data-ttt-foe-kind="self"
+        data-ttt-turn="0">
         <div class="ttt-sqr" data-ttt-col="0" data-ttt-row="0" >
             <button></button> 
         </div>
@@ -157,7 +166,7 @@ div.sideFunc {
         <div data-ttt-vl="0"></div>
         <div data-ttt-vl="1"></div> 
     </div>
-<div class="sideFunc">
+<div id=gameResetDiv class="sideFunc">
     <p id="tttOutcome"></p>
     <form id="rstForm">
         <button type="reset" id="rstButt">reset game</button>
@@ -166,8 +175,14 @@ div.sideFunc {
 </div>
 <script>
 (( function() {
+  let tttAll = document.getElementById('tttAll');
   let tttGrid = document.getElementById('ttt-grid');
+  let cnfgForm = document.getElementById('gameCnfgForm');
   let winnerSym = null;
+  let xmlReqHead = new Headers({ 'Accept': 'application/xml' });
+  let postReqOpts = {
+    'method': 'post', 'headers': xmlReqHead, 'mode': 'same-origin',
+    'credentials': 'include', 'redirect': 'error' };
   function qryStrokeArr(arr) {
     return arr.map (
         (x) => tttGrid.querySelectorAll('.ttt-sqr[data-ttt-col="' + x[1] + '"][data-ttt-row="' + x[0] + '"]')[0]
@@ -201,6 +216,12 @@ div.sideFunc {
         tttGrid.dataset['tttCurrPlyr']= 'o';
     }
   }
+  function radioChange_cb(evnt) {
+    let span = evnt.target.closest('[data-ttt-is-foe-kind]');
+    let foeKind = span.dataset['tttIsFoeKind'];
+    tttGrid.dataset['tttFoeKind']=foeKind;
+    cnfgForm.querySelectorAll('[name="foe-kind"]')[0].value=foeKind;
+  }
   function move_cb(evnt) {
     //console.log(evnt, evnt.target);
     if ('tttWinnerSym' in tttGrid.dataset) return;
@@ -223,6 +244,8 @@ div.sideFunc {
   }
 
   tttGrid.addEventListener('click', move_cb);
+  cnfgForm.querySelectorAll('[name="nemesisRadGrp"]').forEach(
+    (itm) => {itm.addEventListener('change', radioChange_cb);} );
   document.getElementById('rstButt').addEventListener('click',
     (e) => {
         tttGrid.querySelectorAll('.ttt-sqr[data-ttt-mark]').forEach(
@@ -231,7 +254,26 @@ div.sideFunc {
             (itm) => {delete itm.dataset.tttWinMark;} );
         delete tttGrid.dataset.tttWinnerSym;
         tttGrid.dataset['tttCurrPlyr']= 'x';
+        tttAll.dataset['tttPhase']='config';
         } );
+   document.getElementById('startGameButt').addEventListener('click',
+    (e) => {
+        
+        globalThis.cnfgData = new FormData(cnfgForm);
+        tttAll.dataset['tttPhase']='play';
+        for (const entForm of cnfgData.entries()) {
+            console.log(entForm, " ", entForm[0], " ", entForm[1]);  }
+        console.log(cnfgData);
+        fetch('NewGame', postReqOpts).then( data => {console.log(data);return data.text();})
+        .then( data => {
+            const parser = new DOMParser();
+            console.log(data);
+            let xml = parser.parseFromString(data, 'application/xml');
+            console.log('xml:', xml);
+            let gameId = xml.documentElement.getAttribute('gameid');
+            console.log(gameId);
+        });
+    } );
   // console.log('bye');
 })());
 </script>
