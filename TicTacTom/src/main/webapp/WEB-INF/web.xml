@@ -9,4 +9,13 @@
     <welcome-file>default.jsp</welcome-file>
     <welcome-file>default.htm</welcome-file>
   </welcome-file-list>
+  <login-config>
+  	<auth-method>DIGEST</auth-method>
+  	<realm-name>TicTacToe</realm-name>
+  </login-config>
+  <!-- 
+  https://www.ibm.com/docs/en/elo-p/2.1.0?topic=users-configuring-apache-tomcat
+  http://www.avajava.com/tutorials/lessons/how-do-i-use-basic-authentication-with-tomcat.html
+   -->
+  
 </web-app>

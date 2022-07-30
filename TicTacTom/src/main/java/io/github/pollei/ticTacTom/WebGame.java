@@ -1,8 +1,11 @@
 package io.github.pollei.ticTacTom;
 
+import jakarta.annotation.security.DeclareRoles;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.HttpConstraint;
+import jakarta.servlet.annotation.ServletSecurity;
 import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -36,37 +39,21 @@ import io.github.pollei.ticTacTom.XmlUtil;
 /**
  * Servlet implementation class WebGame
  */
+@DeclareRoles(value = { "tttPlayer", "tttAdmin", "manager-gui" })
+@ServletSecurity(
+    @HttpConstraint(
+        rolesAllowed = {"tttPlayer", "tttAdmin", "manager-gui"},
+        transportGuarantee = ServletSecurity.TransportGuarantee.NONE))
 @WebServlet(
     name="WebGame",
     urlPatterns = {"/WebGame","/NewGame", "/Game", "/Game/*", "/WebGame/*" },
-    description = "Play TicTacToe over http/https", loadOnStartup = 8)
+    description = "Play TicTacToe over http/https", loadOnStartup = 13)
 public class WebGame extends HttpServlet {
 	private static final long serialVersionUID = 1L;
   private SecureRandom secRndNumGen;
   private static final ConcurrentHashMap<String, BaseTicTacGame> gameMap = new ConcurrentHashMap<String,BaseTicTacGame>();
   
-  @WebListener()
-  public static class SrvCntListener implements ServletContextListener {
-
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
-      // TODO Auto-generated method stub
-      ServletContextListener.super.contextInitialized(sce);
-      var srvCntx = sce.getServletContext();
-      if (false) // TODO
-      try {
-        var iCntx = new InitialContext();
-        if (iCntx.lookup("java:/comp/env") instanceof Context envCntx) {
-          if (envCntx.lookup("jdbc/my-user-db") instanceof DataSource ds) {
-            // TODO make sure user/password db has correct tables
-          }
-        }
-      } catch (NamingException e) {
-        e.printStackTrace();
-      }
-    }
-    
-  }
+  
        
     /**
      * @see HttpServlet#HttpServlet()

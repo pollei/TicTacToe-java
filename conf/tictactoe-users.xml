@@ -1,0 +1,6 @@
+<?xml version='1.0'  ?>
+<tomcat-users xmlns="http://tomcat.apache.org/xml" version="1.0">
+<user username="tic" password="xMarksSpot" roles="tttPlayer" />
+<user username="tac" password="OhhMy" roles="tttPlayer" />
+<user username="toe" password="OhhMy" roles="tttAdmin,tttPlayer" />
+ </tomcat-users>

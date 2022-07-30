@@ -3,4 +3,33 @@
     <JarScanner>
         <JarScanFilter tldSkip="*.*" defaultTldScan="false" />
     </JarScanner>
+    <Resource name="jdbc/tttUserDB" auth="Container"
+    	type="javax.sql.DataSource"  driverClassName="org.sqlite.JDBC"
+		url="jdbc:sqlite:tttUserDB.db"
+    />
+    <Resource name="tttStaticUserDatabase" auth="Container"
+		type="org.apache.catalina.UserDatabase"
+		description="User database that can be updated and saved"
+		factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+		pathname="conf/tictactoe-users.xml"   />
+	<Resource name="tttUserDatabase" auth="Container"
+		type="org.apache.catalina.UserDatabase"
+              factory="org.apache.catalina.users.DataSourceUserDatabaseFactory"
+              dataSourceName="jdbc/tttUserDB" readonly="false"
+              userTable="users" userNameCol="user_name" userCredCol="user_pass"
+              userRoleTable="user_roles" roleNameCol="role_name"
+              roleTable="roles" groupTable="groups" userGroupTable="user_groups"
+              groupRoleTable="group_roles" groupNameCol="group_name"
+	/>
+    <Realm className="org.apache.catalina.realm.CombinedRealm">
+    	<Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+    		dataSourceName="tttUserDatabase" localDataSource="true"
+    		userTable="users" userNameCol="user_name" userCredCol="user_pass"
+    		userRoleTable="user_roles" roleNameCol="role_name" />
+    	<Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+			resourceName="tttStaticUserDatabase" localJndiResource="true" />
+		<Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+			resourceName="UserDatabase" />
+    	 
+    </Realm>
 </Context>
