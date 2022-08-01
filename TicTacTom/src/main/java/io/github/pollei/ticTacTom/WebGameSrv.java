@@ -15,17 +15,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 //import java.net.http.HttpResponse;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import java.security.NoSuchAlgorithmException;
 //import java.util.random.RandomGenerator;
 import java.security.SecureRandom;
 
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -48,17 +51,18 @@ import io.github.pollei.ticTacTom.XmlUtil;
     name="WebGame",
     urlPatterns = {"/WebGame","/NewGame", "/Game", "/Game/*", "/WebGame/*" },
     description = "Play TicTacToe over http/https", loadOnStartup = 13)
-public class WebGame extends HttpServlet {
+public class WebGameSrv extends HttpServlet {
 	private static final long serialVersionUID = 1L;
   private SecureRandom secRndNumGen;
-  private static final ConcurrentHashMap<String, BaseTicTacGame> gameMap = new ConcurrentHashMap<String,BaseTicTacGame>();
+  private static final ConcurrentHashMap<String, GameWrap> gameMap = new ConcurrentHashMap<>();
+  static final Pattern gameIdPat = Pattern.compile("^/([a-fA-F0-9]+)$");
   
   
        
     /**
      * @see HttpServlet#HttpServlet()
      */
-    public WebGame() {
+    public WebGameSrv() {
         super();
         // TODO Auto-generated constructor stub
     }
@@ -74,6 +78,20 @@ public class WebGame extends HttpServlet {
         throw new ServletException("no random for you", e);
       }
     }
+	
+	static String getGameid(HttpServletRequest request) {
+	  var srvPath = request.getServletPath();
+    var xtra = request.getPathInfo();
+    if (xtra != null &&
+        (srvPath.equals("/WebGame") || srvPath.equals("/Game"))) {
+      var mtch = gameIdPat.matcher(xtra);
+      //System.out.println(mtch);
+      if (mtch.matches()) {
+        return mtch.group(0);
+      }
+    }
+	  return null;
+	}
 
 
   /**
@@ -86,16 +104,29 @@ public class WebGame extends HttpServlet {
 	  var cc=srvCntx.getSessionCookieConfig();
 	  
 	  var srvPath = request.getServletPath();
+	  var xtra = request.getPathInfo();
     if (srvPath.equals("/NewGame")) {
       doNewGame(request, response);
       return;
     }
+    var gameId = getGameid(request);
+    if (null != gameId) {
+      var gameW = gameMap.get(gameId);
+      if (null != gameW) {
+        gameW.doGet(request, response);
+        return;
+      } else {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        response.flushBuffer();
+        return;
+      }
+    }
 		response.getWriter().append("Served at: ").append(request.getContextPath());
 		var srvContext = this.getServletContext();
 		Object o = srvContext.getAttribute("io.github.pollei.ticTac.gmap");
-		var game= new BaseTicTacGame();
+		//var game= new BaseTicTacGame();
 		Long.toHexString(123L);
-		response.getWriter().append(game.toString()).append(" ");
+		//response.getWriter().append(game.toString()).append(" ");
 		response.getWriter().append(request.getPathInfo()).append(" ");
 		response.getWriter().append(request.getServletPath()).append(" ");
 		response.getWriter().append(cc.toString()).append(" ");
@@ -114,27 +145,56 @@ public class WebGame extends HttpServlet {
 		  doNewGame(request, response);
 		  return;
 		}
+		var gameId = getGameid(request);
+    if (null != gameId) {
+      var gameW = gameMap.get(gameId);
+      if (null != gameW) {
+        gameW.doPost(request, response);
+        return;
+      } else {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        response.flushBuffer();
+        return;
+      }
+    }
 	  doGet(request, response);
 	}
 
-  private void doNewGame(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    // TODO Auto-generated method stub
+  private void doNewGame(HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
     //response.addHeader("Content-Type", "application/xml;charset=UTF-8");
+    var isPlayerRole = request.isUserInRole("tttPlayer");
+    if (!isPlayerRole) {
+      response.sendError(HttpServletResponse.SC_FORBIDDEN);
+      response.flushBuffer();
+      return;
+    }
     response.setContentType("application/xml;charset=UTF-8");
-    var doc = XmlUtil.newDoc();
-    var topNod = doc.createElement("newgame");
-    var rndL = secRndNumGen.nextLong();
-    var gameId = Long.toHexString(rndL);
-    topNod.setAttribute("gameid", gameId);
-    doc.appendChild(topNod);
-    var newGame = new BaseTicTacGame();
+    var sess = request.getSession();
+    Document doc;
+    String gameId;
+    String sessAge = sess.isNew() ? "newSess " : "oldSess";
+    //System.out.println("Session");
+    //System.out.println(sess.getMaxInactiveInterval());
+    System.out.println(sessAge + sess.getId() + " " + sess.getCreationTime() );
+    try {
+      doc = XmlUtil.newDoc();
+      var topNod = doc.createElement("newgame");
+      var rndL = secRndNumGen.nextLong();
+      gameId = Long.toHexString(rndL);
+      topNod.setAttribute("gameid", gameId);
+      doc.appendChild(topNod);
+    } catch (DOMException | ParserConfigurationException e) {
+      throw new ServletException("newgame fail", e);
+    }
+    var newGame = new GameWrap(request.getRemoteUser());
     var oldGamme = gameMap.putIfAbsent(gameId, newGame);
     if (oldGamme != null) {
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       // really should retry but this should be EXTREMELY unlikely 500
       return;
     }
-    response.setStatus(HttpServletResponse.SC_CREATED); // created 201
+    //response.setStatus(HttpServletResponse.SC_CREATED); // created 201
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
     try {
       XmlUtil.toWriter(doc, response.getWriter());

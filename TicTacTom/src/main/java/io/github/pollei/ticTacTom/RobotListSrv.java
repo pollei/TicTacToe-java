@@ -25,7 +25,7 @@ import javax.xml.parsers.ParserConfigurationException;
     name="RobotList",
     urlPatterns = {"/RobotList",  "/robot-list" },
     description = "Query the list of robots nemesis for TicTacToe over http/https" )
-public class RobotList extends HttpServlet {
+public class RobotListSrv extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private static final String xmlStr  = getXmlStr();
 	
@@ -65,7 +65,7 @@ public class RobotList extends HttpServlet {
     /**
      * @see HttpServlet#HttpServlet()
      */
-    public RobotList() {
+    public RobotListSrv() {
         super();
     }
 

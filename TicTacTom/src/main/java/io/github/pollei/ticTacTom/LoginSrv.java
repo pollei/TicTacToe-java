@@ -22,6 +22,9 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+
 import org.sqlite.SQLiteDataSource;
 import org.sqlite.JDBC;
 
@@ -52,7 +55,7 @@ import io.github.pollei.ticTacTom.XmlUtil;
     name="Login",
     urlPatterns = {"/login","/logout", "/PlayerList", "/PlayerList/*" },
     description = "login for TicTacToe over http/https", loadOnStartup = 8)
-public class Login extends HttpServlet {
+public class LoginSrv extends HttpServlet {
   /**
    * 
    */
@@ -91,8 +94,88 @@ public class Login extends HttpServlet {
   /**
    * 
    */
-  public Login() {
+  public LoginSrv() {
     // TODO Auto-generated constructor stub
+  }
+
+  @Override
+  protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    // TODO Auto-generated method stub
+    //super.doDelete(req, resp);
+    var user=req.getRemoteUser();
+    boolean isUser = user != null;
+    boolean isAdmin = req.isUserInRole("tttAdmin");
+    if (isUser && !isAdmin) {
+      resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+      resp.flushBuffer();
+      return;
+    }
+  }
+
+  @Override
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    // TODO Auto-generated method stub
+    //super.doGet(req, resp);
+    var srvPath = req.getServletPath();
+    if (srvPath.equals("/PlayerList") && req.getParameter("whoami") !=null) { 
+      doWhoAmI(req,resp); return;
+    }
+  }
+
+  private void doWhoAmI(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+    var user=req.getRemoteUser();
+    var sess = req.getSession();
+    if (user == null) {
+      resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+      resp.flushBuffer();
+      return;
+    }
+    outSelf(req,resp);
+    resp.flushBuffer();
+  }
+
+  private void outSelf(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    var user=req.getRemoteUser();
+    try {
+      var doc = XmlUtil.newDoc();
+      var topNod = doc.createElement("user");
+      topNod.setAttribute("name", user);
+      if (req.isUserInRole("tttAdmin")) {
+        topNod.setAttribute("admin", "true");
+      }
+      doc.appendChild(topNod);
+      resp.setContentType("application/xml;charset=UTF-8");
+      XmlUtil.toWriter(doc, resp.getWriter());
+    } catch (ParserConfigurationException | TransformerException e) {
+      throw new ServletException("login fail", e);
+    }
+    resp.flushBuffer();
+    
+  }
+
+  @Override
+  protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    // TODO Auto-generated method stub
+    //super.doPut(req, resp);
+    var srvPath = req.getServletPath();
+    if (srvPath.equals("/login")) { 
+      doLogin(req,resp); return;
+    }
+    if (srvPath.equals("/logout")) { 
+      doLogout(req,resp); return;
+    }
+  }
+
+  private void doLogout(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+    // TODO Auto-generated method stub
+    req.logout();
+  }
+
+  private void doLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+    var authed = req.authenticate(resp);
+    if (authed) {
+      outSelf(req, resp);
+    }
   }
 
 }

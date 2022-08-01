@@ -17,5 +17,11 @@
   https://www.ibm.com/docs/en/elo-p/2.1.0?topic=users-configuring-apache-tomcat
   http://www.avajava.com/tutorials/lessons/how-do-i-use-basic-authentication-with-tomcat.html
    -->
-  
+  <session-config>
+  	<cookie-config>
+  		<http-only>false</http-only>
+  		<secure>false</secure>
+ 	</cookie-config>
+ 	<tracking-mode>COOKIE</tracking-mode>
+  </session-config>
 </web-app>

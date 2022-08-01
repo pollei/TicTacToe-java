@@ -76,7 +76,7 @@ public final class BaseTicTacGame {
 			this.type =type;
 			this.sym=sym;
 		}
-		Player(PlyrSym sym) {
+		protected Player(PlyrSym sym) {
 			this(PlyrType.Human, sym);
 		}
 		Player() {

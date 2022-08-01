@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Context cookies="true" useHttpOnly="false" >
+<Context cookies="true" useHttpOnly="false" 
+	preemptiveAuthentication="true"  >
     <JarScanner>
         <JarScanFilter tldSkip="*.*" defaultTldScan="false" />
     </JarScanner>

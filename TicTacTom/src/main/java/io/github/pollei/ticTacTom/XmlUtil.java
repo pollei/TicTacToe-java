@@ -28,15 +28,11 @@ public class XmlUtil {
    * 
    */
   public XmlUtil() { }
-  static Document newDoc() {
+  static Document newDoc() throws ParserConfigurationException {
     var dbf = DocumentBuilderFactory.newInstance();
-    try {
       var docBld = dbf.newDocumentBuilder();
       var doc = docBld.newDocument();
       return doc;
-      }
-    catch (RuntimeException | ParserConfigurationException runy) {}
-    return null;
   }
   static void toWriter(Document doc, Writer w) throws TransformerException {
     var transFact = TransformerFactory.newInstance(); 
