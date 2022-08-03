@@ -290,22 +290,28 @@ public final class BaseTicTacGame {
     currPlayer = plyrLst.get(0);
     
 	}
+	public void setHumanPlayerHVC(int place, Player humanPlayer, Robo nemesis) {
+	  if (place<0 || place > 1) return;
+    if (0 != turn) return;
+    PlyrSym hmnSym = humanPlayer.sym;
+    var robo = nemesis.newRobot(hmnSym.toOpponent());
+    var cmpt = new RobotPlayer(hmnSym.toOpponent(), robo);
+    plyrLst.clear();
+    if (1 == place) {
+      plyrLst.add(cmpt);
+      plyrLst.add(humanPlayer);
+    } else if (0 == place) {
+      plyrLst.add(humanPlayer);
+      plyrLst.add(cmpt);
+    }
+    currPlayer = plyrLst.get(0);
+	}
+	
 	public void setHumanPlayerHVC(int place, PlyrSym hmnSym, Robo nemesis) {
 		if (place<0 || place > 1) return;
 		if (0 != turn) return;
 		var hmn = new Player(PlyrType.Human, hmnSym);
-		//var cmpt = new Player(PlyrType.Computer, sym.toOpponent());
-		var robo = nemesis.newRobot(hmnSym.toOpponent());
-		var cmpt = new RobotPlayer(hmnSym.toOpponent(), robo);
-		plyrLst.clear();
-		if (1 == place) {
-			plyrLst.add(cmpt);
-			plyrLst.add(hmn);
-		} else if (0 == place) {
-			plyrLst.add(hmn);
-			plyrLst.add(cmpt);
-		}
-		currPlayer = plyrLst.get(0);
+		setHumanPlayerHVC(place,hmn, nemesis);
 	}
 	public boolean searchWin() {
 	  getWinner();
