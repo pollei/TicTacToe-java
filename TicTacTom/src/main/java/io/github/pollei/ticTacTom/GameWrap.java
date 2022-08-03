@@ -9,14 +9,17 @@ import java.io.IOException;
 import io.github.pollei.ticTac.BaseTicTacGame;
 import io.github.pollei.ticTac.BaseTicTacGame.PlyrSym;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
 
 /**
  * @author Steve_Pollei
  *
  */
+@WebListener()
 public class GameWrap implements HttpSessionListener {
 
   final BaseTicTacGame game = new BaseTicTacGame();
@@ -55,5 +58,12 @@ public class GameWrap implements HttpSessionListener {
       
     }
   }
+  
+  @Override
+  public void sessionDestroyed(HttpSessionEvent se) {
+    // TODO Auto-generated method stub
+    //HttpSessionListener.super.sessionDestroyed(se);
+  }
+  
 
 }
