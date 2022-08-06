@@ -177,31 +177,26 @@ public class WebGameSrv extends HttpServlet {
     //System.out.println("Session");
     //System.out.println(sess.getMaxInactiveInterval());
     System.out.println(sessAge + sess.getId() + " " + sess.getCreationTime() );
-    try {
-      doc = XmlUtil.newDoc();
-      var topNod = doc.createElement("newgame");
+    {
       var rndL = secRndNumGen.nextLong();
       gameId = Long.toHexString(rndL);
-      topNod.setAttribute("gameid", gameId);
-      doc.appendChild(topNod);
-    } catch (DOMException | ParserConfigurationException e) {
-      throw new ServletException("newgame fail", e);
     }
-    var newGame = new GameWrap(request.getRemoteUser());
+    var newGame = new GameWrap(request.getRemoteUser(), gameId);
     var oldGamme = gameMap.putIfAbsent(gameId, newGame);
     if (oldGamme != null) {
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       // really should retry but this should be EXTREMELY unlikely 500
       return;
     }
-    //response.setStatus(HttpServletResponse.SC_CREATED); // created 201
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+    if (GameWrap.isGameCfg(request)) newGame.doGameCfg(request,response);
     try {
+      doc = newGame.newDoc();
       XmlUtil.toWriter(doc, response.getWriter());
-    } catch (TransformerException e) {
+    } catch (DOMException | ParserConfigurationException | TransformerException e) {
       throw new ServletException("newgame fail", e);
     }
+    //response.setStatus(HttpServletResponse.SC_CREATED); // created 201
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
     response.getWriter().flush();
   }
-
 }

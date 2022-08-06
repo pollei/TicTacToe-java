@@ -19,4 +19,5 @@ module ticTacTom {
   requires org.xerial.sqlitejdbc;
   requires java.naming;
   requires jakarta.annotation;
+  requires org.apache.tomcat.catalina;
 }

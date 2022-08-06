@@ -82,18 +82,23 @@ public final class BaseTicTacGame {
 		Player() {
 			this(PlyrType.Human, PlyrSym.X);
 		}
+    public PlyrSym getSym() { return sym; }
 	}
 	public final static class RobotPlayer extends Player {
-	  RobotFactory.IRobot robo;
+	  RobotFactory.Robo robo;
+	  RobotFactory.IRobot iRobo;
 
-	  RobotPlayer(PlyrType type, PlyrSym sym, RobotFactory.IRobot robo) {
+	  RobotPlayer(PlyrType type, PlyrSym sym, RobotFactory.Robo robo) {
 			super(type, sym);
 			this.robo = robo;
+			this.iRobo = robo.newRobot(sym);
 		}
 
-	  RobotPlayer(PlyrSym sym, RobotFactory.IRobot robo) {
+	  RobotPlayer(PlyrSym sym, RobotFactory.Robo robo) {
 			this(PlyrType.Computer, sym, robo);
 		}
+
+    public String getName() { return robo.name(); }
 
 	}
 	
@@ -211,6 +216,7 @@ public final class BaseTicTacGame {
 	//private plyrType firstPlayer = plyrType.Human;
 	private TicBoard board = new TicBoard();
 	private List<Player> plyrLst = new ArrayList<Player>() ;
+	private List<Move> moveLst = new ArrayList<>();
 	private int turn = 0;
 	private Player currPlayer;
 	private Player winPlayer;
@@ -294,8 +300,8 @@ public final class BaseTicTacGame {
 	  if (place<0 || place > 1) return;
     if (0 != turn) return;
     PlyrSym hmnSym = humanPlayer.sym;
-    var robo = nemesis.newRobot(hmnSym.toOpponent());
-    var cmpt = new RobotPlayer(hmnSym.toOpponent(), robo);
+    //var robo = nemesis.newRobot(hmnSym.toOpponent());
+    var cmpt = new RobotPlayer(hmnSym.toOpponent(), nemesis);
     plyrLst.clear();
     if (1 == place) {
       plyrLst.add(cmpt);
@@ -320,7 +326,7 @@ public final class BaseTicTacGame {
 	public Move doComputerTurn() {
 	  if (isDone()) return null;
 	  if (currPlayer instanceof RobotPlayer rp) {
-	    var mv = rp.robo.nextMove(this);
+	    var mv = rp.iRobo.nextMove(this);
 	    this.doMove(mv);
 	    return mv;
 	  }
@@ -332,6 +338,7 @@ public final class BaseTicTacGame {
 		if (mv.sym.isEqual(PlyrSym.Empty)) return;
 		if (null != winPlayer ) return;
 		if (board.boxes[mv.x][mv.y].isEqual(PlyrSym.Empty)) {
+		  moveLst.add(mv);
 			board.boxes[mv.x][mv.y] = mv.sym;
 			turn++;
 			searchWin();
@@ -376,5 +383,8 @@ public final class BaseTicTacGame {
 		return board.boxes[sl.x][sl.y]; }
 	public PlyrSym getSymAtXY(int x, int y) {
     return board.boxes[x][y]; }
+  public int getTurn() { return turn; }
+  public Player getPlayer(int n) { return plyrLst.get(n); }
+  public Move getMove(int n) { return moveLst.get(n); }
 
 }

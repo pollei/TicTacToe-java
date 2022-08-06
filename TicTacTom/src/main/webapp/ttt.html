@@ -121,16 +121,17 @@ div.sideFunc {
             <fieldset>
                 <legend>Opponent</legend>
                 <span data-ttt-is-foe-kind="self"><label for="solNemRaddButt">Solitaire:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="solNemRaddButt" value="self"></span>
+                <input type="radio" name="nemesisRadGrp" id="solNemRaddButt" value="self" checked></span>
                 <span data-ttt-is-foe-kind="robot"><label for="randyNemRaddButt">Randy:&nbsp;</label>
                 <input type="radio" name="nemesisRadGrp" id="randyNemRaddButt" value="Randy">
                 <label for="bobNemRaddButt">Bob:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="bobNemRaddButt" value="Bob" checked>
+                <input type="radio" name="nemesisRadGrp" id="bobNemRaddButt" value="Bob">
                 <label for="emilyNemRaddButt">Emily:&nbsp;</label>
                 <input type="radio" name="nemesisRadGrp" id="emilyNemRaddButt" value="Emily" disabled></span>
                 <span data-ttt-is-foe-kind="human"><!-- player vs. player --></span>
             </fieldset>
-            <input type="text" hidden name="foe-kind" value="robot">
+            <input type="text" hidden name="action" value="config-game">
+            <input type="text" hidden name="foe-kind" value="self">
             <button id="startGameButt" type="button">Start Game</button>
         </form>
     </div>
@@ -181,7 +182,9 @@ div.sideFunc {
   let tttGrid = document.getElementById('ttt-grid');
   let cnfgForm = document.getElementById('gameCnfgForm');
   let winnerSym = null;
-  let xmlReqHead = new Headers({ 'Accept': 'application/xml' });
+  let gameId = null;
+  let xmlReqHead = new Headers({ 'Accept': 'application/xml',
+    'Content-Type': 'application/x-www-form-urlencoded' });
   let postReqOpts = {
     'method': 'post', 'headers': xmlReqHead, 'mode': 'same-origin',
     'credentials': 'include', 'redirect': 'error' };
@@ -211,6 +214,10 @@ div.sideFunc {
     [[0,2],[1,1],[2,0]] ]).map(qryStrokeArr);
   //console.log(strokes);
 
+  function flip_sym(sym) {
+    if (sym.toLowerCase() == 'x') return 'o';
+    return 'x';
+  }
   function nxt_plyr() {
     if ('o' === tttGrid.dataset['tttCurrPlyr']) {
         tttGrid.dataset['tttCurrPlyr']= 'x';
@@ -244,6 +251,20 @@ div.sideFunc {
     nxt_plyr();
 
   }
+  function fetchPostXml(resource, options) {
+    return fetch(resource, {...postReqOpts, ...options })
+        .then( data => {
+            if (!data.ok) {throw new Error(`POST XML ${data.status}`);}
+            console.info(...data.headers);
+            data.headers.get('content-type');
+            return data.text();})
+        .then( data => {
+                const parser = new DOMParser();
+                let xml = parser.parseFromString(data, 'application/xml');
+                console.log('xml:', xml);
+                return xml;
+            });
+  }
 
   tttGrid.addEventListener('click', move_cb);
   cnfgForm.querySelectorAll('[name="nemesisRadGrp"]').forEach(
@@ -261,20 +282,23 @@ div.sideFunc {
    document.getElementById('startGameButt').addEventListener('click',
     (e) => {
         
-        globalThis.cnfgData = new FormData(cnfgForm);
+        let cnfgData = new FormData(cnfgForm);
         tttAll.dataset['tttPhase']='play';
+        tttGrid.dataset['tttFoeKind']=cnfgData.get('foe-kind');
+        let ordr = cnfgData.get('ordrRadGrp');
+        let xo = cnfgData.get('xoRadGrp').toLowerCase();
+        tttGrid.dataset['tttPlayOrder']=ordr;
+        tttGrid.dataset['tttCurrPlyr'] = (
+            +ordr > 0 ? flip_sym(xo) : xo );
         for (const entForm of cnfgData.entries()) {
             console.log(entForm, " ", entForm[0], " ", entForm[1]);  }
         console.log(cnfgData);
-        fetch('NewGame', postReqOpts).then( data => {console.log(data);return data.text();})
-        .then( data => {
-            const parser = new DOMParser();
-            console.log(data);
-            let xml = parser.parseFromString(data, 'application/xml');
-            console.log('xml:', xml);
-            let gameId = xml.documentElement.getAttribute('gameid');
-            console.log(gameId);
-        });
+        let srch = new URLSearchParams(cnfgData);
+        fetchPostXml('NewGame', {'body': srch })
+            .then( xml => {
+                gameId = xml.documentElement.getAttribute('gameid');
+                console.info('gameid: ', gameId);
+            });
     } );
   // console.log('bye');
 })());
