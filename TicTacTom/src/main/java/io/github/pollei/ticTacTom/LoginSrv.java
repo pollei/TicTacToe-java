@@ -16,6 +16,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
@@ -29,6 +32,14 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import org.sqlite.SQLiteDataSource;
+import org.apache.catalina.Container;
+import org.apache.catalina.realm.MessageDigestCredentialHandler;
+import org.apache.catalina.realm.NestedCredentialHandler;
+import org.apache.catalina.realm.SecretKeyCredentialHandler;
+import org.apache.catalina.realm.NullRealm;
+import org.apache.catalina.realm.RealmBase;
+import org.apache.tomcat.util.security.ConcurrentMessageDigest;
+import org.apache.tomcat.util.buf.HexUtils;
 import org.sqlite.JDBC;
 
 import io.github.pollei.ticTacTom.XmlUtil;
@@ -64,12 +75,12 @@ public class LoginSrv extends HttpServlet {
    */
   private static final long serialVersionUID = -647118198759794968L;
   public DataSource userDB;
-  static final Pattern userIdPat = Pattern.compile("^/([a-z][a-z0-9]{0,14})$");
+  static final Pattern userIdPat = Pattern.compile("^/([a-z][a-z0-9_]{0,14})$");
   static final String[] createSqlTables = {
       """
       create table if not exists users (
         user_name         varchar(32) not null primary key,
-        user_pass         varchar(128) not null );
+        user_pass         varchar(512) not null );
       """,
       """
       create table if not exists user_roles (
@@ -149,6 +160,7 @@ public class LoginSrv extends HttpServlet {
       } catch (SQLException | NamingException e) {
         e.printStackTrace();
       }
+      System.out.println(deadbeef("KickMeRealHard"));
     }
   }
 
@@ -157,6 +169,18 @@ public class LoginSrv extends HttpServlet {
    */
   public LoginSrv() {
     // TODO Auto-generated constructor stub
+  }
+  
+  private static String deadbeef(String pt) {
+    try {
+      //var dig = new ConcurrentMessageDigest();
+      ConcurrentMessageDigest.init("SHA-256");
+      byte salt[] = {(byte)0xde, (byte)0xad, (byte)0xbe, (byte)0xef};
+      var dig = ConcurrentMessageDigest.digest("SHA-256", 1 , salt, pt.getBytes("UTF-8"));
+      return "deadbeef$1$" + HexUtils.toHexString(dig);
+    } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
+      return null;
+    }
   }
   
   static String getUserid(HttpServletRequest request) {
@@ -266,13 +290,28 @@ public class LoginSrv extends HttpServlet {
     var usrQuerySql = "select * from users where user_name = ? ;";
     var usrInsertSql = "insert into users values ( ? , ? );";
     var playerRoleInsertSql = "insert into user_roles values ( ? , 'tttPlayer' );";
+    var cntx = req.getServletContext();
+    
+    if (cntx instanceof org.apache.catalina.Container cont) {
+      var realm = cont.getRealm();
+      var credHand = realm.getCredentialHandler();
+      // https://docs.oracle.com/javase/7/docs/technotes/guides/security/StandardNames.html#MessageDigest
+      // MD2 MD5 SHA-1 SHA-256 SHA-512
+    }
+    //var realm = cntx.getRealm
     boolean playerIsPreexist =false;
     try (var conn = getUserDbConnection()) {
       conn.setAutoCommit(false);
       try (var userStmt = conn.prepareStatement(usrInsertSql);
           var roleStmt = conn.prepareStatement(playerRoleInsertSql)) {
         userStmt.setString(1, uid);
-        userStmt.setString(2, "KickMeRealHard");
+        //var realmBase = new NullRealm();
+        //var credHand = new MessageDigestCredentialHandler();
+        //var rb = realmBase.getDigest(playerRoleInsertSql, playerRoleInsertSql);;
+        // KickMeRealHard
+        userStmt.setString(2,
+            "deadbeef$1$bd977372d55a86801257d5d080ef12a221981e945962fd8c7b61d2654ae4f7fc");
+        // deadbeef$1$bd977372d55a86801257d5d080ef12a221981e945962fd8c7b61d2654ae4f7fc
         // TODO set a real password with salted hash
         roleStmt.setString(1, uid);
         userStmt.executeUpdate();
