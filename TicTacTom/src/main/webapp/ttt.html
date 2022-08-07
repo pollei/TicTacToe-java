@@ -100,35 +100,57 @@ div.sideFunc {
     max-width: max(40em, 32vmin);
     padding: 1em;
 }
+fieldset {
+    padding: 0.8em;
+    margin: 0.5em;
+}
+label {
+    padding: 0.4em;
+    margin: .6em;
+}
+label:focus-within  {
+    outline: thin dashed lightblue ;
+    border-radius: 0.62em;
+}
+label:hover  {
+    outline: dashed olivedrab;
+    border-radius: 0.62em;
+}
+fieldset span {
+    margin: .4em;
+}
 </style>
 <div id="tttAll" data-ttt-phase="config">
     <div id=gameCnfgDiv class="sideFunc">
         <form id=gameCnfgForm >
             <fieldset>
                 <legend>X or O</legend>
-                <label for="xRadButt">X:&nbsp;</label>
-                <input type="radio" name="xoRadGrp" id="xRadButt" value="X" checked>
-                <label for="oRadButt">O:&nbsp;</label>
-                <input type="radio" name="xoRadGrp" id="oRadButt" value="O">
+                <label for="xRadButt">X:&nbsp;<input type="radio"
+                    name="xoRadGrp" id="xRadButt" value="X" checked></label>       
+                <label for="oRadButt">O:&nbsp;<input type="radio"
+                    name="xoRadGrp" id="oRadButt" value="O"></label>
             </fieldset>
             <fieldset>
                 <legend>Go First or Last</legend>
-                <label for="frstRaddButt">First:&nbsp;</label>
-                <input type="radio" name="ordrRadGrp" id="frstRaddButt" value="0" checked>
-                <label for="lstRaddButt">Last:&nbsp;</label>
-                <input type="radio" name="ordrRadGrp" id="lstRaddButt" value="1">
-
+                <label for="frstRaddButt">First:&nbsp;<input type="radio"
+                    name="ordrRadGrp" id="frstRaddButt" value="0" checked></label>
+                <label for="lstRaddButt">Last:&nbsp;<input type="radio"
+                    name="ordrRadGrp" id="lstRaddButt" value="1"></label>
             </fieldset>
             <fieldset>
                 <legend>Opponent</legend>
-                <span data-ttt-is-foe-kind="self"><label for="solNemRaddButt">Solitaire:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="solNemRaddButt" value="self" checked></span>
-                <span data-ttt-is-foe-kind="robot"><label for="randyNemRaddButt">Randy:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="randyNemRaddButt" value="Randy">
-                <label for="bobNemRaddButt">Bob:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="bobNemRaddButt" value="Bob">
-                <label for="emilyNemRaddButt">Emily:&nbsp;</label>
-                <input type="radio" name="nemesisRadGrp" id="emilyNemRaddButt" value="Emily" disabled></span>
+                <span data-ttt-is-foe-kind="self"
+                ><label for="solNemRaddButt">Solitaire:&nbsp;<input type="radio"
+                    name="nemesisRadGrp" id="solNemRaddButt" value="self" checked></label>
+                </span>
+                <span data-ttt-is-foe-kind="robot"
+                ><label for="randyNemRaddButt">🤖Randy:&nbsp;<input type="radio"
+                    name="nemesisRadGrp" id="randyNemRaddButt" value="Randy"></label>
+                <label for="bobNemRaddButt">🤖Bob:&nbsp;<input type="radio"
+                    name="nemesisRadGrp" id="bobNemRaddButt" value="Bob"></label>
+                <label for="emilyNemRaddButt">🤖Emily:&nbsp;<input type="radio"
+                    name="nemesisRadGrp" id="emilyNemRaddButt" value="Emily" disabled></label>
+                </span>
                 <span data-ttt-is-foe-kind="human"><!-- player vs. player --></span>
             </fieldset>
             <input type="text" hidden name="action" value="config-game">
