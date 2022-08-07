@@ -1,0 +1,10 @@
+<svg height="100" width="100"
+  xmlns="http://www.w3.org/2000/svg" >
+<defs>
+    <path id="x" d="M10,10L90,90M90,10L10,90" stroke="black" stroke-width="5" />
+    <circle id="o" cx="50" cy="50" r="40" stroke="black" stroke-width="5" fill="none" />
+</defs>
+<path d="M34,4v92M66,4v92M4,34h92M4,66h92" stroke="black" stroke-width="1.7" />
+<use href="#x" transform="translate(34 34) scale(0.33 0.33)" />
+<use href="#o" transform="translate(68 68) scale(0.33 0.33)" />
+</svg>
