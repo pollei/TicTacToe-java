@@ -9,11 +9,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import io.github.pollei.ticTac.BaseTicTacGame;
+import io.github.pollei.ticTac.BaseTicTacGame.Move;
 import io.github.pollei.ticTac.BaseTicTacGame.PlyrSym;
 import io.github.pollei.ticTac.BaseTicTacGame.RobotPlayer;
 import io.github.pollei.ticTac.RobotFactory;
@@ -43,6 +45,7 @@ public class GameWrap implements HttpSessionListener {
   final long createTime = System.currentTimeMillis();
   
   static final Pattern roboPat = Pattern.compile("^([a-z]{1,9})$", Pattern.CASE_INSENSITIVE);
+  static final Pattern simpleArgPat = Pattern.compile("^([0-9xo])$", Pattern.CASE_INSENSITIVE);
 
   static public class WebPlayer extends BaseTicTacGame.Player {
 
@@ -72,7 +75,10 @@ public class GameWrap implements HttpSessionListener {
   void doPost(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     synchronized (webMutex ) {
-      
+      if (isReportMove(req)) {
+        doReportMove(req, resp);
+        return;
+      }
     }
   }
   
@@ -129,6 +135,42 @@ public class GameWrap implements HttpSessionListener {
     return doc;
   }
   
+  void doReportMove(HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
+    Document doc;
+    var turnStr = request.getParameter("turn");
+    var xStr = request.getParameter("x");
+    var yStr = request.getParameter("y");
+    response.setContentType("application/xml;charset=UTF-8");
+    try {
+      int turn = Integer.parseInt(turnStr);
+      int x = Integer.parseInt(xStr);
+      int y = Integer.parseInt(yStr);
+      if (turn != game.getTurn() || x>2 || y>2) {
+        //System.out.println("bad args in report move");
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        return;
+      }
+      var mv = new Move(game.getCurrPlayer().getSym(), x, y);
+      var mvs = game.getMoves();
+      if (!mvs.contains(mv)) {
+        //System.out.println("set mismatch in report move");
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        return;
+      }
+      game.doMove(mv);
+      game.doComputerTurn();
+    } catch (RuntimeException e) { 
+      throw new ServletException("report move invalid args", e);
+    }
+    try {
+      doc = this.newDoc();
+      XmlUtil.toWriter(doc, response.getWriter());
+    } catch (ParserConfigurationException | TransformerException e) {
+      throw new ServletException("report move fail", e);
+    }
+  }
+  
   void doGameCfg(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     synchronized (webMutex) {
@@ -150,6 +192,18 @@ public class GameWrap implements HttpSessionListener {
     }
   }
 
+  static boolean isReportMove(HttpServletRequest request) {
+    var actionStr = request.getParameter("action");
+    //System.out.println("action: " + actionStr);
+    if (! "report-move".equalsIgnoreCase(actionStr)) return false;
+    String[] args = {"x","y","turn","sym"};
+    for (var arg : args) {
+      var argStr=request.getParameter(arg);
+      var mtch=simpleArgPat.matcher(argStr);
+      if (!mtch.matches()) return false;
+    }
+    return true;
+  }
 
   static boolean isGameCfg(HttpServletRequest request) {
     var actionStr = request.getParameter("action");

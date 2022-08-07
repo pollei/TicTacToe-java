@@ -87,7 +87,7 @@ public class WebGameSrv extends HttpServlet {
       var mtch = gameIdPat.matcher(xtra);
       //System.out.println(mtch);
       if (mtch.matches()) {
-        return mtch.group(0);
+        return mtch.group(1);
       }
     }
 	  return null;

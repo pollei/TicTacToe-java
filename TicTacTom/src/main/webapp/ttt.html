@@ -189,11 +189,11 @@ div.sideFunc {
   let postReqOpts = {
     'method': 'post', 'headers': xmlReqHead, 'mode': 'same-origin',
     'credentials': 'include', 'redirect': 'error' };
-  function qryStrokeArr(arr) {
-    return arr.map (
-        (x) => tttGrid.querySelectorAll('.ttt-sqr[data-ttt-col="' + x[1] + '"][data-ttt-row="' + x[0] + '"]')[0]
-    );
+  function sqrQry(x,y) {
+    return tttGrid.querySelectorAll(
+      '.ttt-sqr[data-ttt-col="' + x + '"][data-ttt-row="' + y + '"]')[0];
   }
+  function qryStrokeArr(arr) { return arr.map ( (p) => sqrQry(p[0],p[1]) ); }
   function isWinStroke(arr) {
     for (var itm of arr) {
         if (!('tttMark' in itm.dataset)) return false; }
@@ -220,11 +220,9 @@ div.sideFunc {
     return 'x';
   }
   function nxt_plyr() {
-    if ('o' === tttGrid.dataset['tttCurrPlyr']) {
-        tttGrid.dataset['tttCurrPlyr']= 'x';
-    } else {
-        tttGrid.dataset['tttCurrPlyr']= 'o';
-    }
+    if (tttGrid.dataset['tttCurrPlyr']== 'over') return;
+    tttGrid.dataset['tttCurrPlyr']=flip_sym(tttGrid.dataset['tttCurrPlyr']);
+    tttGrid.dataset['tttTurn']++;
   }
   function radioChange_cb(evnt) {
     let span = evnt.target.closest('[data-ttt-is-foe-kind]');
@@ -232,11 +230,7 @@ div.sideFunc {
     tttGrid.dataset['tttFoeKind']=foeKind;
     cnfgForm.querySelectorAll('[name="foe-kind"]')[0].value=foeKind;
   }
-  function move_cb(evnt) {
-    //console.log(evnt, evnt.target);
-    if ('tttWinnerSym' in tttGrid.dataset) return;
-    let sqr = evnt.target.closest('.ttt-sqr');
-    if ('tttMark' in sqr.dataset) return;
+  function move_sqr(sqr) {
     sqr.dataset.tttMark=tttGrid.dataset['tttCurrPlyr'];
     let winArr = strokes.filter(isWinStroke);
     if (winArr.length) {
@@ -249,6 +243,46 @@ div.sideFunc {
         }
         return;
     }
+  }
+  function moveByXml(xml) {
+    let turn=tttGrid.dataset['tttTurn'];
+    let mvElem=xml.querySelectorAll('move[index="'+ turn + '"]')[0];
+    if (null === mvElem || undefined === mvElem) return;
+    console.info(mvElem);
+    const x = mvElem.getAttribute('x');
+    const y = mvElem.getAttribute('y');
+    let sqr = sqrQry(x,y);
+    if ('tttMark' in sqr.dataset) {
+        console.error('should be unmarked', sqr, sqr.dataset);
+        return;}
+    move_sqr(sqr);
+    nxt_plyr();
+  }
+  function move_report(sqr) {
+    if ('robot' != tttGrid.dataset['tttFoeKind']) return;
+    let url ='WebGame/' + gameId;
+    const y = sqr.dataset.tttRow;
+    const x = sqr.dataset.tttCol;
+    const turn = tttGrid.dataset['tttTurn'];
+    const sym = tttGrid.dataset['tttCurrPlyr'];
+    let srch = new URLSearchParams(
+        {'action':'report-move', 'turn': turn, "x": x, "y":y, "sym": sym });
+    fetchPostXml(url, {'body': srch })
+            .then( xml => {
+                moveByXml(xml);
+            });
+  }
+  function move_cb(evnt) {
+    //console.log(evnt, evnt.target);
+    if ('tttWinnerSym' in tttGrid.dataset) return;
+    let sqr = evnt.target.closest('.ttt-sqr');
+    if ('tttMark' in sqr.dataset) return;
+    if ('over' == tttGrid.dataset['tttCurrPlyr']
+        || 'play' != tttAll.dataset['tttPhase'] ) return;
+    if ('self' != tttGrid.dataset['tttFoeKind'] && 
+        tttGrid.dataset['tttSelfSym'] != tttGrid.dataset['tttCurrPlyr']) return;
+    move_sqr(sqr);
+    move_report(sqr);
     nxt_plyr();
 
   }
@@ -286,11 +320,12 @@ div.sideFunc {
         let cnfgData = new FormData(cnfgForm);
         tttAll.dataset['tttPhase']='play';
         tttGrid.dataset['tttFoeKind']=cnfgData.get('foe-kind');
+        tttGrid.dataset['tttTurn']=0;
         let ordr = cnfgData.get('ordrRadGrp');
         let xo = cnfgData.get('xoRadGrp').toLowerCase();
         tttGrid.dataset['tttPlayOrder']=ordr;
-        tttGrid.dataset['tttCurrPlyr'] = (
-            +ordr > 0 ? flip_sym(xo) : xo );
+        tttGrid.dataset['tttCurrPlyr'] = ( +ordr > 0 ? flip_sym(xo) : xo );
+        tttGrid.dataset['tttSelfSym'] = xo;
         for (const entForm of cnfgData.entries()) {
             console.log(entForm, " ", entForm[0], " ", entForm[1]);  }
         console.log(cnfgData);
@@ -299,6 +334,7 @@ div.sideFunc {
             .then( xml => {
                 gameId = xml.documentElement.getAttribute('gameid');
                 console.info('gameid: ', gameId);
+                moveByXml(xml);
             });
     } );
   // console.log('bye');
