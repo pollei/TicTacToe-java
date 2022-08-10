@@ -206,6 +206,7 @@ fieldset span {
   let cnfgForm = document.getElementById('gameCnfgForm');
   let winnerSym = null;
   let gameId = null;
+  let dying = false;
   let xmlReqHead = new Headers({ 'Accept': 'application/xml',
     'Content-Type': 'application/x-www-form-urlencoded' });
   let postReqOpts = {
@@ -255,16 +256,21 @@ fieldset span {
   function move_sqr(sqr) {
     sqr.dataset.tttMark=tttGrid.dataset['tttCurrPlyr'];
     let winArr = strokes.filter(isWinStroke);
+    let turn=tttGrid.dataset['tttTurn'];
     if (winArr.length) {
         console.log(winArr);
         tttGrid.dataset['tttCurrPlyr']= 'over';
+        tttGrid.dataset['tttWinnerSym'] = tttGrid.dataset['tttCurrPlyr'];
         for (strk of winArr) {
             for (sqr of strk) {
                 sqr.dataset.tttWinMark="win";
             }
         }
-        return;
-    }
+        shutdown_game();
+    } else if (+turn >= 8) {
+        tttGrid.dataset['tttCurrPlyr']= 'over';
+        tttGrid.dataset['tttWinnerSym'] = "_";
+        shutdown_game();}
   }
   function moveByXml(xml) {
     let turn=tttGrid.dataset['tttTurn'];
@@ -273,6 +279,8 @@ fieldset span {
     console.info(mvElem);
     const x = mvElem.getAttribute('x');
     const y = mvElem.getAttribute('y');
+    const dyingAtt = xml.documentElement.getAttribute('dying');
+    if ('true' == dyingAtt) dying =true;
     let sqr = sqrQry(x,y);
     if ('tttMark' in sqr.dataset) {
         console.error('should be unmarked', sqr, sqr.dataset);
@@ -282,6 +290,8 @@ fieldset span {
   }
   function move_report(sqr) {
     if ('robot' != tttGrid.dataset['tttFoeKind']) return;
+    if ('over' == tttGrid.dataset['tttCurrPlyr']
+        || 'play' != tttAll.dataset['tttPhase'] ) return;
     let url ='WebGame/' + gameId;
     const y = sqr.dataset.tttRow;
     const x = sqr.dataset.tttCol;
@@ -290,9 +300,11 @@ fieldset span {
     let srch = new URLSearchParams(
         {'action':'report-move', 'turn': turn, "x": x, "y":y, "sym": sym });
     fetchPostXml(url, {'body': srch })
-            .then( xml => {
-                moveByXml(xml);
-            });
+            .then( xml => { moveByXml(xml); },
+            err => {
+                if (404 == err?.cause?.status )
+                    gameId=null; });
+    // TODO if 404 then likely session timed out 
   }
   function move_cb(evnt) {
     //console.log(evnt, evnt.target);
@@ -311,7 +323,8 @@ fieldset span {
   function fetchPostXml(resource, options) {
     return fetch(resource, {...postReqOpts, ...options })
         .then( data => {
-            if (!data.ok) {throw new Error(`POST XML ${data.status}`);}
+            if (!data.ok) {
+                throw new Error(`POST XML ${data.status}`, {cause: data});}
             console.info(...data.headers);
             data.headers.get('content-type');
             return data.text();})
@@ -322,12 +335,25 @@ fieldset span {
                 return xml;
             });
   }
+  function shutdown_game() {
+    if ('robot' != tttGrid.dataset['tttFoeKind']) return;
+    if (null == gameId) return;
+    window.removeEventListener('beforeunload',shutdown_game);
+    //if (dying) return;
+    let url ='WebGame/' + gameId;
+    let srch = new URLSearchParams( {'action':'shutdown-game' });
+    fetchPostXml(url, {'body': srch })
+        .then( data_ignore => { gameId = null; },
+            err => { if (404 == err?.cause?.status ) gameId=null; });
+  }
 
   tttGrid.addEventListener('click', move_cb);
   cnfgForm.querySelectorAll('[name="nemesisRadGrp"]').forEach(
     (itm) => {itm.addEventListener('change', radioChange_cb);} );
   document.getElementById('rstButt').addEventListener('click',
     (e) => {
+        shutdown_game();
+        dying=false;
         tttGrid.querySelectorAll('.ttt-sqr[data-ttt-mark]').forEach(
             (itm) => {delete itm.dataset.tttMark;} );
         tttGrid.querySelectorAll('.ttt-sqr[data-ttt-win-mark]').forEach(
@@ -340,14 +366,17 @@ fieldset span {
     (e) => {
         
         let cnfgData = new FormData(cnfgForm);
+        let foeKind = cnfgData.get('foe-kind');
         tttAll.dataset['tttPhase']='play';
-        tttGrid.dataset['tttFoeKind']=cnfgData.get('foe-kind');
+        tttGrid.dataset['tttFoeKind']= foeKind;
         tttGrid.dataset['tttTurn']=0;
         let ordr = cnfgData.get('ordrRadGrp');
         let xo = cnfgData.get('xoRadGrp').toLowerCase();
         tttGrid.dataset['tttPlayOrder']=ordr;
         tttGrid.dataset['tttCurrPlyr'] = ( +ordr > 0 ? flip_sym(xo) : xo );
         tttGrid.dataset['tttSelfSym'] = xo;
+        if ('robot' == foeKind) {
+            window.addEventListener('beforeunload',shutdown_game); }
         for (const entForm of cnfgData.entries()) {
             console.log(entForm, " ", entForm[0], " ", entForm[1]);  }
         console.log(cnfgData);

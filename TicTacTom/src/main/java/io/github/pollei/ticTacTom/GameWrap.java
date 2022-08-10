@@ -30,11 +30,12 @@ import jakarta.servlet.http.HttpSessionListener;
  * @author Steve_Pollei
  *
  */
-@WebListener()
-public class GameWrap implements HttpSessionListener {
+final public class GameWrap {
 
   final BaseTicTacGame game = new BaseTicTacGame();
   final Object webMutex = new Object();
+  //final ReentrantLock webLock = new ReentrantLock(false);
+  //final Condition moveCond = webLock.newCondition();
   // https://blog.ffwll.ch/2022/08/locking-hierarchy.html
   // Level 1: Big Dumb Lock
   AtomicBoolean atomicDeath = new AtomicBoolean();
@@ -42,20 +43,20 @@ public class GameWrap implements HttpSessionListener {
   String gameId;
   String nemesisName;
   WebPlayer self;
+  boolean autoDie = false;
   final long createTime = System.currentTimeMillis();
+  long lastModTime = System.currentTimeMillis();
   
   static final Pattern roboPat = Pattern.compile("^([a-z]{1,9})$", Pattern.CASE_INSENSITIVE);
   static final Pattern simpleArgPat = Pattern.compile("^([0-9xo])$", Pattern.CASE_INSENSITIVE);
 
   static public class WebPlayer extends BaseTicTacGame.Player {
-
     String userName;
-
+    boolean readyToDie=false;
     WebPlayer(PlyrSym sym, String userName) {
       super(sym);
       this.userName = userName;
     }
-    
   }
   boolean isReadyToDie() { return atomicDeath.get(); }
   /**
@@ -69,25 +70,41 @@ public class GameWrap implements HttpSessionListener {
   void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     synchronized (webMutex ) {
-      
+      var turnStr = req.getParameter("turn");
+      try {
+        if (null != turnStr) {
+          var turn = Integer.parseInt(turnStr);
+          if (turn < 0 || turn > 9) {throw new IndexOutOfBoundsException(); }
+          if (turn >= game.getTurn()) {
+            webMutex.wait(10500);
+            if (turn >= game.getTurn()) {
+              resp.addHeader("Retry-After", "1");
+              resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            }
+          }
+        }
+      }
+      catch (RuntimeException  e) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        return;
+      } catch (  InterruptedException e) { }
+      out(resp);
     }
   }
   void doPost(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     synchronized (webMutex ) {
+      if (isReadyToDie()) { out(resp); return; }
       if (isReportMove(req)) {
         doReportMove(req, resp);
         return;
       }
+      if (isShutdownGame(req)) {
+        doShutdownGame(req, resp);
+        return;
+      }
     }
   }
-  
-  @Override
-  public void sessionDestroyed(HttpSessionEvent se) {
-    // TODO Auto-generated method stub
-    //HttpSessionListener.super.sessionDestroyed(se);
-  }
-  
   Element moveElem(Document doc, int n) {
     try {
       var move = game.getMove(n);
@@ -119,7 +136,9 @@ public class GameWrap implements HttpSessionListener {
   Document newDoc() throws ParserConfigurationException {
     var doc = XmlUtil.newDoc();
     var topNod = doc.createElement("game");
+    doc.appendChild(topNod);
     if (null != this.gameId) topNod.setAttribute("gameid", this.gameId);
+    if (isReadyToDie()) { topNod.setAttribute("dying", "true"); }
     if (null != game) {
       topNod.setAttribute("turn", String.valueOf(game.getTurn()));
     }
@@ -131,7 +150,6 @@ public class GameWrap implements HttpSessionListener {
       var mvE = moveElem(doc, n);
       if (null != mvE) topNod.appendChild(mvE);
     }
-    doc.appendChild(topNod);
     return doc;
   }
   
@@ -158,11 +176,15 @@ public class GameWrap implements HttpSessionListener {
         response.sendError(HttpServletResponse.SC_BAD_REQUEST);
         return;
       }
+      this.lastModTime = System.currentTimeMillis();
       game.doMove(mv);
       game.doComputerTurn();
+      game.doLastTurn();
+      if (autoDie && game.isDone()) {atomicDeath.set(true);}
     } catch (RuntimeException e) { 
       throw new ServletException("report move invalid args", e);
     }
+    webMutex.notifyAll();
     try {
       doc = this.newDoc();
       XmlUtil.toWriter(doc, response.getWriter());
@@ -185,11 +207,29 @@ public class GameWrap implements HttpSessionListener {
         var nemesis = RobotFactory.getRoboByName(nemesisStr);
         this.self = new WebPlayer(hmnSym, creator);
         game.setHumanPlayerHVC(Integer.parseInt(ordStr), self, nemesis);
+        //this.autoDie = true;
       } catch (RuntimeException e) { 
         throw new ServletException("configure Game invalid args", e);
       }
       game.doComputerTurn();
     }
+  }
+  private void out(HttpServletResponse resp) 
+      throws ServletException, IOException {
+    resp.setContentType("application/xml;charset=UTF-8");
+    resp.addDateHeader("Last-Modified", lastModTime);
+    // TODO ETag
+    try {
+      Document doc = this.newDoc();
+      XmlUtil.toWriter(doc, resp.getWriter());
+    } catch (ParserConfigurationException | TransformerException e) {
+      throw new ServletException("out game fail", e);
+    }
+  }
+  private void doShutdownGame(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+    atomicDeath.set(true);
+    out(resp);
   }
 
   static boolean isReportMove(HttpServletRequest request) {
@@ -202,6 +242,12 @@ public class GameWrap implements HttpSessionListener {
       var mtch=simpleArgPat.matcher(argStr);
       if (!mtch.matches()) return false;
     }
+    return true;
+  }
+  static boolean isShutdownGame(HttpServletRequest request) {
+    var actionStr = request.getParameter("action");
+    //System.out.println("action: " + actionStr);
+    if (! "shutdown-game".equalsIgnoreCase(actionStr)) return false;
     return true;
   }
 

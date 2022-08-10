@@ -11,9 +11,13 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSessionEvent;
+import jakarta.servlet.http.HttpSessionListener;
+
 //import jakarta.json.Json;
 import java.io.IOException;
-//import java.net.http.HttpResponse;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -51,7 +55,7 @@ import io.github.pollei.ticTacTom.XmlUtil;
     name="WebGame",
     urlPatterns = {"/WebGame","/NewGame", "/Game", "/Game/*", "/WebGame/*" },
     description = "Play TicTacToe over http/https", loadOnStartup = 13)
-public class WebGameSrv extends HttpServlet {
+final public class WebGameSrv extends HttpServlet {
 	private static final long serialVersionUID = 1L;
   private SecureRandom secRndNumGen;
   private static final ConcurrentHashMap<String, GameWrap> gameMap = new ConcurrentHashMap<>();
@@ -92,12 +96,22 @@ public class WebGameSrv extends HttpServlet {
     }
 	  return null;
 	}
-
+	@SuppressWarnings("unchecked")
+  static ConcurrentHashMap<String, WeakReference<GameWrap> > getSessGameMap(HttpSession sess) {
+	  var gmraw = sess.getAttribute("gameMap");
+	  if (gmraw instanceof ConcurrentHashMap<?,? > gm) {
+	    return (ConcurrentHashMap<String, WeakReference<GameWrap>>) gm;
+	  }
+	  return null;
+	}
+	static ConcurrentHashMap<String, WeakReference<GameWrap> > getSessGameMap(HttpServletRequest req) {
+	  return getSessGameMap(req.getSession()); }
 
   /**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+	    throws ServletException, IOException {
 		// TODO Auto-generated method stub
 	  var sess = request.getSession();
 	  var srvCntx = request.getServletContext();
@@ -138,7 +152,8 @@ public class WebGameSrv extends HttpServlet {
 	/**
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+	    throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		var srvPath = request.getServletPath();
 		if (srvPath.equals("/NewGame")) {
@@ -146,10 +161,21 @@ public class WebGameSrv extends HttpServlet {
 		  return;
 		}
 		var gameId = getGameid(request);
+		System.out.println("game map size " + gameMap.size());
     if (null != gameId) {
       var gameW = gameMap.get(gameId);
       if (null != gameW) {
+        // in theory race window exists where another thread did action=shutdown-game
+        // they game might still be accessible, but be in dying state
         gameW.doPost(request, response);
+        // in theory race window exists where another thread did action=shutdown-game
+        // in theory more than one thread might try to remove the game
+        if (gameW.isReadyToDie()) {
+          boolean died = gameMap.remove(gameId, gameW);
+          System.out.println("atomicly dead game " + gameId + " " + died);
+          var sessGameMap= getSessGameMap(request);
+          sessGameMap.remove(gameId);
+        }
         return;
       } else {
         response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -157,8 +183,23 @@ public class WebGameSrv extends HttpServlet {
         return;
       }
     }
-	  doGet(request, response);
+	  //doGet(request, response);
 	}
+	@Override
+  protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+	  var gameId = getGameid(req);
+	  var isAdmin = req.isUserInRole("tttAdmin") ||
+	      req.isUserInRole("manager-gui");
+	  if (null == gameId || !isAdmin) {
+	    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+	    return; }
+	  var oldGame = gameMap.remove(gameId);
+	  if (null == oldGame) {
+	    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+	  }
+
+  }
 
   private void doNewGame(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
@@ -188,6 +229,8 @@ public class WebGameSrv extends HttpServlet {
       // really should retry but this should be EXTREMELY unlikely 500
       return;
     }
+    var sessGameMap= getSessGameMap(request);
+    sessGameMap.put(gameId, new WeakReference<GameWrap>(newGame));
     if (GameWrap.isGameCfg(request)) newGame.doGameCfg(request,response);
     try {
       doc = newGame.newDoc();
@@ -199,4 +242,34 @@ public class WebGameSrv extends HttpServlet {
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
     response.getWriter().flush();
   }
+  
+  @WebListener()
+  final static public class sessDeathListener implements HttpSessionListener {
+    @Override
+    public void sessionCreated(HttpSessionEvent se) {
+      // TODO Auto-generated method stub
+      HttpSessionListener.super.sessionCreated(se);
+      var sess = se.getSession();
+      var gm = new ConcurrentHashMap<String, WeakReference<GameWrap> >();
+      sess.setAttribute("gameMap", gm);
+      System.out.println("session gamemap created");
+      //sess.setMaxInactiveInterval(13);
+      // set to a short time to test destruction
+    }
+
+    @Override
+    public void sessionDestroyed(HttpSessionEvent se) {
+      // TODO Auto-generated method stub
+      HttpSessionListener.super.sessionDestroyed(se);
+      var sess = se.getSession();
+      var gm = getSessGameMap(sess);
+      System.out.println("session destroying");
+      for (var ent : gm.entrySet()) {
+        //var game = ent.getValue().get();
+        gameMap.remove(ent.getKey());
+      }
+    }
+  }
+
+  
 }

@@ -332,6 +332,17 @@ public final class BaseTicTacGame {
 	  }
 		return null;
 	}
+	public Move doLastTurn() {
+    if (isDone()) return null;
+    if (8 == turn) {
+      var mvs = getMoves();
+      if (1 != mvs.size()) return null;
+      var mv = mvs.toArray( new Move[] {null})[0];
+      this.doMove(mv);
+      return mv;
+    }
+    return null;
+  }
 	public void doMove(Move mv) {
 		if (mv.x < 0 || mv.x > 2 ||
 		    mv.y < 0 || mv.y > 2) return;
