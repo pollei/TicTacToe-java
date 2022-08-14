@@ -69,7 +69,7 @@ import io.github.pollei.ticTacTom.XmlUtil;
     name="Login",
     urlPatterns = {"/login","/logout", "/PlayerList", "/PlayerList/*" },
     description = "login for TicTacToe over http/https", loadOnStartup = 8)
-public class LoginSrv extends HttpServlet {
+final public class LoginSrv extends HttpServlet {
   /**
    * 
    */
@@ -80,6 +80,7 @@ public class LoginSrv extends HttpServlet {
       """
       create table if not exists users (
         user_name         varchar(32) not null primary key,
+        user_full_name    varchar(128) not null,
         user_pass         varchar(512) not null );
       """,
       """
@@ -91,12 +92,12 @@ public class LoginSrv extends HttpServlet {
       """
       create table if not exists roles (
         role_name         varchar(32) not null primary key,
-        role_description  varchar(128) );
+        description       varchar(128) );
       """,
       """
       create table if not exists groups (
         group_name        varchar(32) not null primary key,
-        group_description varchar(128) );
+        description       varchar(128) );
       """,
       """
       create table if not exists user_groups (
@@ -156,11 +157,28 @@ public class LoginSrv extends HttpServlet {
              "insert or ignore into roles values ('tttPlayer', 'TicTacToe Player');");
          stmt.execute(
              "insert or ignore into roles values ('tttAdmin', 'TicTacToe Administrator');");
+         //  https://www.delftstack.com/howto/mysql/mysql-insert-records-if-not-exists/
+         int rowCnt = stmt.executeUpdate("""
+             insert or ignore into users select * from (select 
+             'tttBootStrap' as user_name,
+             'ttt temporary bootstrap admin' as user_full_name,
+             'deadbeef$1$bd977372d55a86801257d5d080ef12a221981e945962fd8c7b61d2654ae4f7fc' as user_pass) as fake
+             where not exists (
+               select * from (users, user_roles using (user_name)) where (role_name is 'tttAdmin'));
+             """);
+         if (rowCnt > 0) {
+           stmt.execute(
+               "insert or ignore into user_roles values ('tttBootStrap', 'tttAdmin' );"); }
         }
       } catch (SQLException | NamingException e) {
         e.printStackTrace();
       }
-      System.out.println(deadbeef("KickMeRealHard"));
+      //System.out.println(deadbeef("KickMeRealHard"));
+      // deadbeef$1$bd977372d55a86801257d5d080ef12a221981e945962fd8c7b61d2654ae4f7fc
+      //System.out.println(deadbeef("xMarksSpot"));
+      // deadbeef$1$d5fa36765e630654ec2433e6aa0e450c789e2bcf43260f9f4de1cc869e840c2a
+      //System.out.println(deadbeef("OhhMy"));
+      // deadbeef$1$e365574a4e397d9648a1fae05bb2aeb4aeba567f99faf39affb928adcc18ac2d
     }
   }
 

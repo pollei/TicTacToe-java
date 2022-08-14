@@ -17,10 +17,13 @@
 		type="org.apache.catalina.UserDatabase"
               factory="org.apache.catalina.users.DataSourceUserDatabaseFactory"
               dataSourceName="jdbc/tttUserDB" readonly="false"
-              userTable="users" userNameCol="user_name" userCredCol="user_pass"
+              userTable="users" userNameCol="user_name" userFullNameCol="user_full_name"
+              userCredCol="user_pass"
               userRoleTable="user_roles" roleNameCol="role_name"
-              roleTable="roles" groupTable="groups" userGroupTable="user_groups"
+              roleTable="roles" groupTable="groups"
+              userGroupTable="user_groups"
               groupRoleTable="group_roles" groupNameCol="group_name"
+              roleAndGroupDescriptionCol="description"
 	/>
     <Realm className="org.apache.catalina.realm.CombinedRealm">
     	<!-- 
