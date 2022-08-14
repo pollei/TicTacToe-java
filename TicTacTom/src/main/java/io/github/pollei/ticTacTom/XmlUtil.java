@@ -3,6 +3,7 @@
  */
 package io.github.pollei.ticTacTom;
 
+import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 
@@ -18,11 +19,14 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
+
 /**
  * @author Steve_Pollei
  *
  */
-public class XmlUtil {
+final public class XmlUtil {
 
   /**
    * 
@@ -46,6 +50,11 @@ public class XmlUtil {
     toWriter(doc, strWrite);
     return strWrite.toString();
     
+  }
+  static void toResponse( Document doc, HttpServletResponse resp) 
+      throws TransformerException, IOException {
+    resp.setContentType("application/xml;charset=UTF-8");
+    toWriter(doc, resp.getWriter());
   }
   static String toString0(Document doc) {
     var transFact = TransformerFactory.newInstance();

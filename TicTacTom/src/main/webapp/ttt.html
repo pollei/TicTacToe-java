@@ -238,6 +238,7 @@ fieldset span {
     [[0,2],[1,1],[2,0]] ]).map(qryStrokeArr);
   //console.log(strokes);
 
+  const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   function flip_sym(sym) {
     if (sym.toLowerCase() == 'x') return 'o';
     return 'x';
@@ -346,6 +347,13 @@ fieldset span {
         .then( data_ignore => { gameId = null; },
             err => { if (404 == err?.cause?.status ) gameId=null; });
   }
+  async function keep_alive(maxInterval) {
+    let waitTime = 0.7*(maxInterval*1000);
+    // TODO add some jitter to the waitTime
+    while (1) {
+        await waitMs(waitTime);
+        await fetchPostXml('KeepAlive'); }
+  }
 
   tttGrid.addEventListener('click', move_cb);
   cnfgForm.querySelectorAll('[name="nemesisRadGrp"]').forEach(
@@ -388,6 +396,10 @@ fieldset span {
                 moveByXml(xml);
             });
     } );
+    fetchPostXml('KeepAlive')
+        .then( xml => {
+            let intrv = xml.documentElement.getAttribute('interval');
+            keep_alive(intrv); });
   // console.log('bye');
 })());
 </script>
