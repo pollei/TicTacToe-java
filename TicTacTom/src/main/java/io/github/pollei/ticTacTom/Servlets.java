@@ -30,7 +30,8 @@ public final class Servlets {
   @WebServlet(
       name="RobotList",
       urlPatterns = {"/RobotList",  "/robot-list" },
-      description = "Query the list of robots nemesis for TicTacToe over http/https" )
+      description = "Query the list of robots nemesis for TicTacToe over http/https",
+      loadOnStartup = 17 )
   final static public class RobotListSrv extends HttpServlet {
     private static final long serialVersionUID = 2499584481482159049L;
     private static final String xmlStr  = getXmlStr();
@@ -62,7 +63,7 @@ public final class Servlets {
   @WebServlet(
       name="KeepAlive",
       urlPatterns = {"/KeepAlive",  "/keep-alive" },
-      description = "keep session alive" )
+      description = "keep session alive", loadOnStartup = 17 )
   public static final class KeepAliveSrv extends HttpServlet {
     private static final long serialVersionUID = 8633283633064146016L;
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
