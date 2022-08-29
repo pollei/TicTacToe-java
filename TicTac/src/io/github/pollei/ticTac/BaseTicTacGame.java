@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 //import java.util.function.Supplier;
@@ -71,7 +72,7 @@ public final class BaseTicTacGame {
 	 */
 	static public class Player {
 		final PlyrType type;
-		final PlyrSym sym;
+		PlyrSym sym;
 		Player(PlyrType type, PlyrSym sym) {
 			this.type =type;
 			this.sym=sym;
@@ -241,6 +242,7 @@ public final class BaseTicTacGame {
   	            .filter( (itm) -> itm.hasLoc(sq) )
   	            .collect(Collectors.toList())
 	            )) ;
+	private final Random random = new Random();
 	
 	public Player getPlayerBySym(PlyrSym sym) {
 	  for (var p : plyrLst) {
@@ -318,6 +320,17 @@ public final class BaseTicTacGame {
 		if (0 != turn) return;
 		var hmn = new Player(PlyrType.Human, hmnSym);
 		setHumanPlayerHVC(place,hmn, nemesis);
+	}
+	public void setPlayersRandomly(List<Player> plyrLst) {
+	  int ordrMix = random.nextInt(2);
+	  int symMix = random.nextInt(2);
+	  var sym = symMix == 0 ? PlyrSym.X : PlyrSym.O;
+	  plyrLst.get(0).sym = sym;
+	  plyrLst.get(1).sym = sym.toOpponent();
+	  this.plyrLst.clear();
+	  this.plyrLst.add(plyrLst.get(ordrMix));
+	  this.plyrLst.add(plyrLst.get(ordrMix ^ 1));
+	  currPlayer = this.plyrLst.get(0);
 	}
 	public boolean searchWin() {
 	  getWinner();

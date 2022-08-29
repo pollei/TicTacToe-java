@@ -38,7 +38,7 @@ public final class Servlets {
     private static String getXmlStr() {
       String ret = null;
       try {
-        var doc = XmlUtil.newDoc();
+        var doc = Util.newDoc();
         var rlNod = doc.createElement("robolist");
         for (var r:  Robo.values()) {
           var robNod = doc.createElement("player");
@@ -46,7 +46,7 @@ public final class Servlets {
           rlNod.appendChild(robNod);
         }
         doc.appendChild(rlNod);
-        ret = XmlUtil.toString(doc);
+        ret = Util.toString(doc);
       } catch (ParserConfigurationException | TransformerException e) {
         e.printStackTrace();
       }
@@ -75,12 +75,12 @@ public final class Servlets {
       var maxAge = Math.min(maxInterval/8 + 1, 30);
       response.addHeader("Cache-Control", String.format( "max-age=%d", maxAge));
       try {
-        var doc = XmlUtil.newDoc();
+        var doc = Util.newDoc();
         var sessNod = doc.createElement("session");
         doc.appendChild(sessNod);
         sessNod.setAttribute("interval", String.valueOf(maxInterval));
         if (sess.isNew()) sessNod.setAttribute("new", "true");
-        XmlUtil.toResponse(doc, response);
+        Util.toResponse(doc, response);
       } catch (ParserConfigurationException | TransformerException e) { 
         e.printStackTrace();
         throw new ServletException("keep alive fail", e);

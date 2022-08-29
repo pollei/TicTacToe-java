@@ -50,14 +50,6 @@ final public class GameWrap {
   static final Pattern roboPat = Pattern.compile("^([a-z]{1,9})$", Pattern.CASE_INSENSITIVE);
   static final Pattern simpleArgPat = Pattern.compile("^([0-9xo])$", Pattern.CASE_INSENSITIVE);
 
-  static public class WebPlayer extends BaseTicTacGame.Player {
-    String userName;
-    boolean readyToDie=false;
-    WebPlayer(PlyrSym sym, String userName) {
-      super(sym);
-      this.userName = userName;
-    }
-  }
   boolean isReadyToDie() { return atomicDeath.get(); }
   /**
    * 
@@ -134,7 +126,7 @@ final public class GameWrap {
     }
   }
   Document newDoc() throws ParserConfigurationException {
-    var doc = XmlUtil.newDoc();
+    var doc = Util.newDoc();
     var topNod = doc.createElement("game");
     doc.appendChild(topNod);
     if (null != this.gameId) topNod.setAttribute("gameid", this.gameId);
@@ -187,7 +179,7 @@ final public class GameWrap {
     webMutex.notifyAll();
     try {
       doc = this.newDoc();
-      XmlUtil.toWriter(doc, response.getWriter());
+      Util.toWriter(doc, response.getWriter());
     } catch (ParserConfigurationException | TransformerException e) {
       throw new ServletException("report move fail", e);
     }
@@ -221,7 +213,7 @@ final public class GameWrap {
     // TODO ETag
     try {
       Document doc = this.newDoc();
-      XmlUtil.toWriter(doc, resp.getWriter());
+      Util.toWriter(doc, resp.getWriter());
     } catch (ParserConfigurationException | TransformerException e) {
       throw new ServletException("out game fail", e);
     }

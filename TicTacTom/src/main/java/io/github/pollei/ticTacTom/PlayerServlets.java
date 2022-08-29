@@ -15,20 +15,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.regex.Pattern;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.sql.DataSource;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import org.apache.tomcat.util.security.ConcurrentMessageDigest;
-import org.apache.catalina.users.DataSourceUserDatabase;
 import org.apache.tomcat.util.buf.HexUtils;
 
 
@@ -80,27 +75,6 @@ public final class PlayerServlets {
   // https://docs.oracle.com/javase/tutorial/jdbc/basics/index.html
   // https://www.sqlite.org/lang_createtable.html
   
-  public static Connection getUserDbConnection()
-      throws NamingException, SQLException {
-    var iCntx = new InitialContext();
-    if (iCntx.lookup("java:/comp/env") instanceof Context envCntx) {
-      if (envCntx.lookup("jdbc/tttUserDB") instanceof DataSource ds) {
-        return ds.getConnection();
-      }
-    }
-    return null;
-  }
-  public static DataSourceUserDatabase getUserDatasource()
-      throws NamingException {
-    var iCntx = new InitialContext();
-    if (iCntx.lookup("java:/comp/env") instanceof Context envCntx) {
-      if (envCntx.lookup("tttUserDatabase") instanceof DataSourceUserDatabase ds) {
-        return ds ;
-      }
-    }
-    return null;
-  }
-  
   @WebListener()
   public static class SrvCntListener implements ServletContextListener {
 
@@ -109,7 +83,7 @@ public final class PlayerServlets {
       // TODO Auto-generated method stub
       ServletContextListener.super.contextInitialized(sce);
       var srvCntx = sce.getServletContext();
-      try (var conn = getUserDbConnection()) {
+      try (var conn = Util.getUserDbConnection()) {
         var dbMeta = conn.getMetaData();
         var tables = dbMeta.getTables(null,null,null,null);
         var tabMeta = tables.getMetaData();
@@ -124,22 +98,28 @@ public final class PlayerServlets {
          stmt.execute(
              "insert or ignore into roles values ('tttAdmin', 'TicTacToe Administrator');");
          //  https://www.delftstack.com/howto/mysql/mysql-insert-records-if-not-exists/
-         int rowCnt = stmt.executeUpdate("""
+         int usrRowCnt = stmt.executeUpdate("""
              insert or ignore into users select * from (select 
              'tttBootStrap' as user_name,
              'ttt temporary bootstrap admin' as user_full_name,
-             'deadbeef$1$bd977372d55a86801257d5d080ef12a221981e945962fd8c7b61d2654ae4f7fc' as user_pass) as fake
+             'KickMeRealHard' as user_pass) as fake
              where not exists (
                select * from (users, user_roles using (user_name)) where (role_name is 'tttAdmin'));
              """);
-         if (rowCnt > 0) {
+         if (usrRowCnt > 0) {
            stmt.execute(
                "insert or ignore into user_roles values ('tttBootStrap', 'tttAdmin' );"); }
+         stmt.executeUpdate("""
+             insert or ignore into groups select * from (select 
+             'grid_goblins' as group_name,
+             'Grid Goblins' as description) as fake
+             where not exists ( select * from groups);
+             """);
         }
       } catch (SQLException | NamingException e) {
         e.printStackTrace();
       }
-      System.out.println(deadbeef("KickMeRealHard"));
+      //System.out.println(deadbeef("KickMeRealHard"));
       // deadbeef$1$bd977372d55a86801257d5d080ef12a221981e945962fd8c7b61d2654ae4f7fc
       //System.out.println(deadbeef("xMarksSpot"));
       // deadbeef$1$d5fa36765e630654ec2433e6aa0e450c789e2bcf43260f9f4de1cc869e840c2a
@@ -176,14 +156,14 @@ public final class PlayerServlets {
       throws ServletException, IOException {
     var user=req.getRemoteUser();
     try {
-      var doc = XmlUtil.newDoc();
+      var doc = Util.newDoc();
       var topNod = doc.createElement("user");
       topNod.setAttribute("name", user);
       if (req.isUserInRole("tttAdmin")) {
         topNod.setAttribute("admin", "true");
       }
       doc.appendChild(topNod);
-      XmlUtil.toResponse(doc, resp);
+      Util.toResponse(doc, resp);
       //resp.setContentType("application/xml;charset=UTF-8");
       //XmlUtil.toWriter(doc, resp.getWriter());
     } catch (ParserConfigurationException | TransformerException e) {
@@ -209,6 +189,10 @@ public final class PlayerServlets {
       if (authed) {
         outSelf(req, resp);
       }
+    }
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+      doPost(req, resp);
     }
   }
   @WebServlet(
@@ -254,13 +238,14 @@ public final class PlayerServlets {
       }
       req.authenticate(resp);
       if (isAdminUser( req)) {
-        try (var conn = getUserDbConnection()) {
-          var doc = XmlUtil.newDoc();
+        try (var conn = Util.getUserDbConnection()) {
+          var doc = Util.newDoc();
           var topNod = doc.createElement("players");
           doc.appendChild(topNod);
           try (var stmt = conn.createStatement()) {
             var qResults = stmt.executeQuery(
                 "select * from users left join user_groups using (user_name);");
+            // https://www.geeksforgeeks.org/sql-join-set-1-inner-left-right-and-full-joins/
             while (qResults.next()) {
               var plyrNod = doc.createElement("player");
               plyrNod.setAttribute("name", qResults.getString(1) );
@@ -270,7 +255,7 @@ public final class PlayerServlets {
               topNod.appendChild(plyrNod);
             }
           }
-          XmlUtil.toResponse(doc, resp);
+          Util.toResponse(doc, resp);
           
         } catch (SQLException | NamingException | ParserConfigurationException | TransformerException e) {
           e.printStackTrace();
@@ -293,7 +278,7 @@ public final class PlayerServlets {
       var full_nameStr = req.getParameter("full_name");
       var passwordStr = req.getParameter("password");
       try {
-        var ds = getUserDatasource();
+        var ds = Util.getUserDatasource();
         ds.createUser(user_nameStr, passwordStr, full_nameStr);
         ds.save();
       } catch (Exception e) {

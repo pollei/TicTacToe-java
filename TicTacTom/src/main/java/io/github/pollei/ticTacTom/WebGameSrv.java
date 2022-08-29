@@ -38,7 +38,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import io.github.pollei.ticTac.BaseTicTacGame;
-import io.github.pollei.ticTacTom.XmlUtil;
+import io.github.pollei.ticTacTom.Util;
 //import io.github.pollei.ticTac.*;
 //import io.github.pollei.ticTac.BaseTicTacGame;
 //import io.github.pollei.ticTac.*;
@@ -154,7 +154,7 @@ final public class WebGameSrv extends HttpServlet {
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 	    throws ServletException, IOException {
-		// TODO Auto-generated method stub
+		//System.out.println("in post of game");
 		var srvPath = request.getServletPath();
 		if (srvPath.equals("/NewGame")) {
 		  doNewGame(request, response);
@@ -204,7 +204,8 @@ final public class WebGameSrv extends HttpServlet {
   private void doNewGame(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     //response.addHeader("Content-Type", "application/xml;charset=UTF-8");
-    var isPlayerRole = request.isUserInRole("tttPlayer");
+    var isPlayerRole = request.isUserInRole("tttPlayer") ||
+        PlayerServlets.isAdminUser(request);
     if (!isPlayerRole) {
       response.sendError(HttpServletResponse.SC_FORBIDDEN);
       response.flushBuffer();
@@ -234,7 +235,7 @@ final public class WebGameSrv extends HttpServlet {
     if (GameWrap.isGameCfg(request)) newGame.doGameCfg(request,response);
     try {
       doc = newGame.newDoc();
-      XmlUtil.toWriter(doc, response.getWriter());
+      Util.toWriter(doc, response.getWriter());
     } catch (DOMException | ParserConfigurationException | TransformerException e) {
       throw new ServletException("newgame fail", e);
     }
